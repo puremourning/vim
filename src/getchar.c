@@ -1819,7 +1819,7 @@ vgetc(void)
     {
 	/* Don't trigger 'balloonexpr' unless only the mouse was moved. */
 	bevalexpr_due_set = FALSE;
-	ui_remove_balloon();
+	ui_remove_balloon(&balloon_pum);
     }
 #endif
 

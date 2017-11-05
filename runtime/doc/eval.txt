@@ -2220,6 +2220,8 @@ haslocaldir([{winnr} [, {tabnr}]])
 				Number	|TRUE| if the window executed |:lcd|
 hasmapto({what} [, {mode} [, {abbr}]])
 				Number	|TRUE| if mapping to {what} exists
+hint_start({column}, {list})	Number	Open a new argument hint menu
+hint_clear()			Number	Close the argument hint menu
 histadd({history}, {item})	String	add an item to a history
 histdel({history} [, {item}])	String	remove an item from a history
 histget({history} [, {index}])	String	get the item {index} from a history
@@ -5153,6 +5155,16 @@ hasmapto({what} [, {mode} [, {abbr}]])			*hasmapto()*
 			:endif
 <		This installs the mapping to "\ABCdoit" only if there isn't
 		already a mapping to "\ABCdoit".
+hint_start({column}, {list})				*hint_start()*
+		Sets the contents of the |argument-hint-menu| to the to the
+		list of strings {list}, anchoring the menu at {column}
+		starting from the line above cursor.
+		Note: This function only works from insert mode, and thus
+		should be called from a timer callback, or something similar.
+
+hint_clear()						*hint_clear()*
+		Clears the contents of the |argument-hint-menu|.
+		Returns 0.
 
 histadd({history}, {item})				*histadd()*
 		Add the String {item} to the history {history} which can be

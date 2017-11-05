@@ -1945,7 +1945,7 @@ show_popupmenu(void)
 	else
 #  endif
 #  if defined(FEAT_TERM_POPUP_MENU)
-	    pum_show_popupmenu(menu);
+	    pum_show_popupmenu(&compl_pum, menu);
 #  endif
     }
 }

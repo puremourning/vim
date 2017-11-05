@@ -8916,7 +8916,7 @@ ex_popup(exarg_T *eap)
 #  endif
 # endif
 # ifdef FEAT_TERM_POPUP_MENU
-	pum_make_popup(eap->arg, eap->forceit);
+	pum_make_popup(&compl_pum, eap->arg, eap->forceit);
 # endif
 }
 #endif

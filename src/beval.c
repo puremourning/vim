@@ -148,12 +148,12 @@ post_balloon(BalloonEval *beval UNUSED, char_u *mesg, list_T *list UNUSED)
 #  ifdef FEAT_GUI
     if (!gui.in_use)
 #  endif
-	ui_post_balloon(mesg, list);
+	ui_post_balloon(&balloon_pum, mesg, list);
 # endif
 # ifdef FEAT_BEVAL_GUI
     if (gui.in_use)
 	/* GUI can't handle a list */
-	gui_mch_post_balloon(beval, mesg);
+	gui_mch_post_balloon(&balloon_pum, beval, mesg);
 # endif
 }
 

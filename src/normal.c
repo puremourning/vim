@@ -2386,7 +2386,7 @@ do_mouse(
     {
 	/* Mouse moved without a button pressed. */
 #ifdef FEAT_BEVAL_TERM
-	ui_may_remove_balloon();
+	ui_may_remove_balloon(&balloon_pum);
 	if (p_bevalterm && !VIsual_active)
 	{
 	    profile_setlimit(p_bdlay, &bevalexpr_due);

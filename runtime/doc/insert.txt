@@ -1285,6 +1285,13 @@ character and some condition is met.  For example, for typing a dot: >
 See |:map-<expr>| for more info.
 
 
+ARGUMENT HINT MENU					*argument-hint-menu*
+
+In addition to |ins-completion-menu|, Vim can display function argument hints
+in another popup menu on the opposite side of the |ins-completion-menu|
+from the cursor.
+
+
 FILETYPE-SPECIFIC REMARKS FOR OMNI COMPLETION	    *compl-omni-filetypes*
 
 The file used for {filetype} should be autoload/{filetype}complete.vim
