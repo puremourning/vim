@@ -272,6 +272,8 @@ static colnr_T get_nolist_virtcol(void);
 static char_u *do_insert_char_pre(int c);
 #endif
 
+static void ins_hint_draw(void);
+
 static colnr_T	Insstart_textlen;	/* length of line when insert started */
 static colnr_T	Insstart_blank_vcol;	/* vcol for first inserted blank */
 static int	update_Insstart_orig = TRUE; /* set Insstart_orig to Insstart */
@@ -375,7 +377,7 @@ edit(
 
 #ifdef FEAT_INS_EXPAND
     /* Don't allow recursive insert mode when busy with completion. */
-    if (compl_started || compl_busy || pum_visible())
+    if (compl_started || compl_busy || pum_visible(&compl_pum))
     {
 	EMSG(_(e_secure));
 	return FALSE;
@@ -660,7 +662,7 @@ edit(
 
 	if (stop_insert_mode
 #ifdef FEAT_INS_EXPAND
-		&& !pum_visible()
+		&& !pum_visible(&compl_pum)
 #endif
 		)
 	{
@@ -1294,7 +1296,7 @@ doESCkey:
 
 	case K_UP:	/* <Up> */
 #ifdef FEAT_INS_EXPAND
-	    if (pum_visible())
+	    if (pum_visible(&compl_pum))
 		goto docomplete;
 #endif
 	    if (mod_mask & MOD_MASK_SHIFT)
@@ -1307,7 +1309,7 @@ doESCkey:
 	case K_PAGEUP:
 	case K_KPAGEUP:
 #ifdef FEAT_INS_EXPAND
-	    if (pum_visible())
+	    if (pum_visible(&compl_pum))
 		goto docomplete;
 #endif
 	    ins_pageup();
@@ -1315,7 +1317,7 @@ doESCkey:
 
 	case K_DOWN:	/* <Down> */
 #ifdef FEAT_INS_EXPAND
-	    if (pum_visible())
+	    if (pum_visible(&compl_pum))
 		goto docomplete;
 #endif
 	    if (mod_mask & MOD_MASK_SHIFT)
@@ -1328,7 +1330,7 @@ doESCkey:
 	case K_PAGEDOWN:
 	case K_KPAGEDOWN:
 #ifdef FEAT_INS_EXPAND
-	    if (pum_visible())
+	    if (pum_visible(&compl_pum))
 		goto docomplete;
 #endif
 	    ins_pagedown();
@@ -1471,7 +1473,7 @@ docomplete:
 	    c = ins_ctrl_ey(c);
 	    break;
 
-	  default:
+	default:
 #ifdef UNIX
 	    if (c == intr_char)		/* special interrupt char */
 		goto do_intr;
@@ -1592,7 +1594,6 @@ force_cindent:
 	    }
 	}
 #endif /* FEAT_CINDENT */
-
     }	/* for (;;) */
     /* NOTREACHED */
 }
@@ -1635,7 +1636,7 @@ ins_redraw(
 	&& !EQUAL_POS(last_cursormoved, curwin->w_cursor)
 # endif
 # ifdef FEAT_INS_EXPAND
-	&& !pum_visible()
+	&& !pum_visible(&compl_pum)
 # endif
        )
     {
@@ -1677,7 +1678,7 @@ ins_redraw(
     if (ready && has_textchangedI()
 	    && last_changedtick != CHANGEDTICK(curbuf)
 # ifdef FEAT_INS_EXPAND
-	    && !pum_visible()
+	    && !pum_visible(&compl_pum)
 # endif
 	    )
     {
@@ -2877,6 +2878,169 @@ set_completion(colnr_T startcol, list_T *list)
 static pumitem_T *compl_match_array = NULL;
 static int compl_match_arraysize;
 
+/* "hint_match_array" points the currently displayed list of entries in the
+ * hint popup.  It is NULL when there is no popup. */
+static pumitem_T *hint_match_array = NULL;
+static int hint_match_arraysize = 0;
+static int hint_match_startcol = -1;
+
+static void ins_hint_free( int free_array )
+{
+    for(int i = 0; i<hint_match_arraysize; ++i)
+    {
+	vim_free( hint_match_array[i].pum_text );
+	vim_free( hint_match_array[i].pum_info );
+	vim_free( hint_match_array[i].pum_kind );
+	vim_free( hint_match_array[i].pum_extra );
+
+	hint_match_array[i].pum_text = NULL;
+	hint_match_array[i].pum_info = NULL;
+	hint_match_array[i].pum_kind = NULL;
+	hint_match_array[i].pum_extra = NULL;
+    }
+
+    if ( free_array )
+    {
+	vim_free(hint_match_array);
+	hint_match_arraysize = 0;
+	hint_match_array = NULL;
+    }
+}
+
+void ins_hint_start(colnr_T startcol, list_T* list)
+{
+    // TODO(Ben): Make this code-style compatible.
+    ins_hint_set_hints(startcol, list);
+
+    ins_hint_draw();
+}
+
+void ins_hint_draw(void)
+{
+    if (hint_match_array != NULL)
+    {
+	/* In Replace mode when a $ is displayed at the end of the line only
+	 * part of the screen would be updated.  We do need to redraw here. */
+	dollar_vcol = -1;
+
+	/* Compute the screen column of the start of the completed text.
+	 * Use the cursor to get all wrapping and other settings right. */
+
+	// TODO(Ben): We should set this to the column where the trigger
+	// occurred (e.g. the open bracket)
+	// That is, when we have any idea how to achieve that. Given that ctrl-x
+	// mode is horrendously complicated, I think we want to avoid it. There
+	// are no key combinations associated with hints, so perhaps all we need
+	// is to expose vimscript which controls when to show/hide the hint
+	int col = curwin->w_cursor.col;
+	curwin->w_cursor.col = hint_match_startcol;
+
+	pum_display(&hint_pum,
+		    TRUE /* invert position */,
+		    hint_match_array,
+		    hint_match_arraysize,
+		    hint_match_arraysize);
+
+	/* reset the current column */
+	curwin->w_cursor.col = col;
+    }
+}
+
+void ins_hint_set_hints(int startcol, list_T* list)
+{
+    if (hint_match_array == NULL)
+    {
+	hint_match_arraysize = list->lv_len;
+	hint_match_array = (pumitem_T*)alloc_clear(
+	    (unsigned)(sizeof(pumitem_T) * hint_match_arraysize));
+    }
+    else if (list->lv_len != hint_match_arraysize)
+    {
+	// TODO(Ben): It seems that if we reallocate this here, Vim crashes.
+	// Investigate why, and prevent the fucking leak!
+	//
+	// TODO(Ben): It is _probably_ the actual string values that need to
+	// persist, though... for how long? Until after the next call to
+	// pum_display() ? Perhaps so. Perhaps it is not legal to cal pum_redraw
+	// on old data. Perhaps we should return from this method that a redraw
+	// will no longer be valid.
+	ins_hint_free( TRUE );
+
+	hint_match_arraysize = list->lv_len;
+	hint_match_array = (pumitem_T*)alloc_clear(
+	    (unsigned)(sizeof(pumitem_T) * hint_match_arraysize));
+    }
+    else
+    {
+	ins_hint_free( FALSE );
+
+	// TODO(Ben): THe following isn't strictly necessary
+	vim_memset( hint_match_array,
+		    0,
+		    (unsigned)(sizeof(pumitem_T) * hint_match_arraysize) );
+    }
+
+    hint_match_startcol = startcol;
+
+    int i = 0;
+    for( listitem_T* li = list->lv_first;
+	 li != NULL && i < hint_match_arraysize;
+	 li = li->li_next, ++i )
+    {
+	// FIXME/TODO: Strings a freed when freeing hint_match_array in
+	// ins_hint_free
+
+	char_u* hint = get_tv_string( &li->li_tv );
+
+	hint_match_array[i].pum_text = vim_strsave(hint);
+	hint_match_array[i].pum_kind = vim_strsave((char_u *)"");
+	hint_match_array[i].pum_extra = vim_strsave((char_u *)"");
+	hint_match_array[i].pum_info =  vim_strsave((char_u *)"");
+	hint_match_array[i].hl_range_text_start = 0;
+	hint_match_array[i].hl_range_text_len = 0;
+
+	// Find a single |...| range and use it for highlighting
+	int barpos[2] = {-1,-1};
+	int len = strlen( (const char*)hint );
+	for (int j = 0; j < len; ++j )
+	{
+	    if (hint[j] == '|')
+	    {
+		if (barpos[0] < 0)
+		{
+		    barpos[0] = j;
+		    continue;
+		}
+		if (barpos[1] < 0)
+		{
+		    barpos[1] = j;
+		    break;
+		}
+	    }
+	}
+
+	if (barpos[1] >= 0)
+	{
+	    hint_match_array[i].hl_range_text_start = barpos[0];
+	    hint_match_array[i].hl_range_text_len =
+		( barpos[1] - barpos[0] ) + 1;
+	}
+    }
+}
+
+void ins_hint_clear()
+{
+    // TODO(Ben): Call this. See ins_compl_free? certainly look at call-sites of
+    // ins_compl_del_pum()
+    if (hint_match_array != NULL)
+    {
+	pum_undisplay(&hint_pum);
+	ins_hint_free( TRUE );
+    }
+    hint_match_startcol = -1;
+    pum_clear(&hint_pum);
+}
+
 /*
  * Update the screen and when there is any scrolling remove the popup menu.
  */
@@ -2902,7 +3066,7 @@ ins_compl_del_pum(void)
 {
     if (compl_match_array != NULL)
     {
-	pum_undisplay();
+	pum_undisplay(&compl_pum);
 	vim_free(compl_match_array);
 	compl_match_array = NULL;
     }
@@ -3095,7 +3259,11 @@ ins_compl_show_pum(void)
 	 * Use the cursor to get all wrapping and other settings right. */
 	col = curwin->w_cursor.col;
 	curwin->w_cursor.col = compl_col;
-	pum_display(compl_match_array, compl_match_arraysize, cur);
+	pum_display(&compl_pum,
+		    FALSE /* other_pum */,
+		    compl_match_array,
+		    compl_match_arraysize,
+		    cur);
 	curwin->w_cursor.col = col;
     }
 }
@@ -3415,7 +3583,7 @@ ins_compl_free(void)
 	return;
 
     ins_compl_del_pum();
-    pum_clear();
+    pum_clear(&compl_pum);
 
     compl_curr_match = compl_first_match;
     do
@@ -3929,7 +4097,7 @@ ins_compl_prep(int c)
 	     * compl_enter_selects is set the Enter key does the same. */
 	    if ((c == Ctrl_Y || (compl_enter_selects
 				   && (c == CAR || c == K_KENTER || c == NL)))
-		    && pum_visible())
+		    && pum_visible(&compl_pum))
 		retval = TRUE;
 
 	    /* CTRL-E means completion is Ended, go back to the typed text.
@@ -5070,7 +5238,8 @@ ins_compl_key2dir(int c)
     static int
 ins_compl_pum_key(int c)
 {
-    return pum_visible() && (c == K_PAGEUP || c == K_KPAGEUP || c == K_S_UP
+    return pum_visible(&compl_pum) &&
+	   (c == K_PAGEUP || c == K_KPAGEUP || c == K_S_UP
 		     || c == K_PAGEDOWN || c == K_KPAGEDOWN || c == K_S_DOWN
 		     || c == K_UP || c == K_DOWN);
 }
@@ -5086,7 +5255,7 @@ ins_compl_key2count(int c)
 
     if (ins_compl_pum_key(c) && c != K_UP && c != K_DOWN)
     {
-	h = pum_get_height();
+	h = pum_get_height(&compl_pum);
 	if (h > 3)
 	    h -= 2; /* keep some context */
 	return h;
@@ -7136,6 +7305,11 @@ stop_insert(
     can_si = FALSE;
     can_si_back = FALSE;
 #endif
+
+    // TODO(Ben): Is this the right place? Clear the hint pum when we leave
+    // insert mode. There may be a more canonical way to do this. The standard
+    // pum undisplays when leaving ctrl-x mode (which happens with ESC too).
+    ins_hint_clear();
 
     /* Set '[ and '] to the inserted text.  When end_insert_pos is NULL we are
      * now in a different buffer. */
@@ -9430,7 +9604,7 @@ ins_mousescroll(int dir)
 
 # ifdef FEAT_INS_EXPAND
     /* Don't scroll the window in which completion is being done. */
-    if (!pum_visible() || curwin != old_curwin)
+    if (!pum_visible(&compl_pum) || curwin != old_curwin)
 # endif
     {
 	if (dir == MSCR_DOWN || dir == MSCR_UP)
@@ -9468,7 +9642,7 @@ ins_mousescroll(int dir)
     /* The popup menu may overlay the window, need to redraw it.
      * TODO: Would be more efficient to only redraw the windows that are
      * overlapped by the popup menu. */
-    if (pum_visible() && did_scroll)
+    if (pum_visible(&compl_pum) && did_scroll)
     {
 	redraw_all_later(NOT_VALID);
 	ins_compl_show_pum();

@@ -108,6 +108,12 @@ static void f_complete(typval_T *argvars, typval_T *rettv);
 static void f_complete_add(typval_T *argvars, typval_T *rettv);
 static void f_complete_check(typval_T *argvars, typval_T *rettv);
 #endif
+
+// TODO(Ben): some sort of FEAT_INS_EXPAND
+static void f_hint_start(typval_T *argvars, typval_T *rettv UNUSED);
+static void f_hint_set(typval_T *argvars, typval_T *rettv UNUSED);
+static void f_hint_clear(typval_T *argvars UNUSED, typval_T *rettv UNUSED);
+
 static void f_confirm(typval_T *argvars, typval_T *rettv);
 static void f_copy(typval_T *argvars, typval_T *rettv);
 #ifdef FEAT_FLOAT
@@ -638,6 +644,9 @@ static struct fst
     {"hasmapto",	1, 3, f_hasmapto},
     {"highlightID",	1, 1, f_hlID},		/* obsolete */
     {"highlight_exists",1, 1, f_hlexists},	/* obsolete */
+    {"hint_clear",      0, 0, f_hint_clear},
+    {"hint_set",        2, 2, f_hint_set},
+    {"hint_start",      2, 2, f_hint_start},
     {"histadd",		2, 2, f_histadd},
     {"histdel",		1, 2, f_histdel},
     {"histget",		1, 2, f_histget},
@@ -2167,6 +2176,43 @@ f_col(typval_T *argvars, typval_T *rettv)
 	}
     }
     rettv->vval.v_number = col;
+}
+
+static void f_hint_start(typval_T *argvars, typval_T *rettv UNUSED)
+{
+    if ((State & INSERT) == 0)
+    {
+	EMSG(_("E785: hint_start() can only be used in Insert mode"));
+	return;
+    }
+
+    if (argvars[1].v_type != VAR_LIST || argvars[1].vval.v_list == NULL)
+    {
+	EMSG(_(e_invarg));
+	return;
+    }
+
+    int startcol = (int)get_tv_number_chk(&argvars[0], NULL);
+    if (startcol <= 0)
+	return;
+
+    ins_hint_start(startcol - 1, argvars[1].vval.v_list);
+}
+
+static void f_hint_set(typval_T *argvars, typval_T *rettv UNUSED)
+{
+    int startcol = (int)get_tv_number_chk(&argvars[0], NULL);
+    if (startcol <= 0)
+	return;
+
+    // TODO(Ben): Many checks are required
+    ins_hint_set_hints(startcol, argvars[1].vval.v_list);
+}
+
+static void f_hint_clear(typval_T *argvars UNUSED, typval_T *rettv UNUSED)
+{
+    // TODO(Ben): Many checks are required
+    ins_hint_clear();
 }
 
 #if defined(FEAT_INS_EXPAND)
@@ -8131,7 +8177,7 @@ f_printf(typval_T *argvars, typval_T *rettv)
 f_pumvisible(typval_T *argvars UNUSED, typval_T *rettv UNUSED)
 {
 #ifdef FEAT_INS_EXPAND
-    if (pum_visible())
+    if (pum_visible(&compl_pum))
 	rettv->vval.v_number = 1;
 #endif
 }

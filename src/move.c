@@ -137,7 +137,7 @@ redraw_for_cursorline(win_T *wp)
 		)
 	    && (wp->w_valid & VALID_CROW) == 0
 # ifdef FEAT_INS_EXPAND
-	    && !pum_visible()
+	    && !pum_visible(&compl_pum)
 # endif
 	    )
 	redraw_win_later(wp, SOME_VALID);
@@ -808,7 +808,7 @@ validate_virtcol_win(win_T *wp)
 #ifdef FEAT_SYN_HL
 	if (wp->w_p_cuc
 # ifdef FEAT_INS_EXPAND
-		&& !pum_visible()
+		&& !pum_visible(&compl_pum)
 # endif
 		)
 	    redraw_win_later(wp, SOME_VALID);
@@ -1167,7 +1167,7 @@ curs_columns(
     /* Redraw when w_virtcol changes and 'cursorcolumn' is set */
     if (curwin->w_p_cuc && (curwin->w_valid & VALID_VIRTCOL) == 0
 # ifdef FEAT_INS_EXPAND
-	    && !pum_visible()
+	    && !pum_visible(&compl_pum)
 # endif
 	)
 	redraw_later(SOME_VALID);

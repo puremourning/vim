@@ -560,6 +560,8 @@ update_screen(int type_arg)
 
     if (must_redraw)
     {
+	// TODO(Ben): When we call update_screen(0) from ins_compl_upd_pum,
+	// we assume the value of must_redraw if it is nonzero
 	if (type < must_redraw)	    /* use maximal type */
 	    type = must_redraw;
 
@@ -768,8 +770,8 @@ update_screen(int type_arg)
 #endif
 #ifdef FEAT_INS_EXPAND
     /* May need to redraw the popup menu. */
-    if (pum_visible())
-	pum_redraw();
+    if (pum_visible(&compl_pum))
+	pum_redraw(&compl_pum);
 #endif
 
     /* Reset b_mod_set flags.  Going through all windows is probably faster
@@ -6834,7 +6836,7 @@ win_redr_status(win_T *wp)
 #ifdef FEAT_INS_EXPAND
 	    /* don't update status line when popup menu is visible and may be
 	     * drawn over it */
-	    || pum_visible()
+	    || pum_visible(&compl_pum)
 #endif
 	    )
     {
@@ -10782,7 +10784,7 @@ showruler(int always)
     if (!always && !redrawing())
 	return;
 #ifdef FEAT_INS_EXPAND
-    if (pum_visible())
+    if (pum_visible(&compl_pum))
     {
 	/* Don't redraw right now, do it later. */
 	curwin->w_redr_status = TRUE;
@@ -10850,7 +10852,7 @@ win_redr_ruler(win_T *wp, int always)
 	if (edit_submode != NULL)
 	    return;
     /* Don't draw the ruler when the popup menu is visible, it may overlap. */
-    if (pum_visible())
+    if (pum_visible(&compl_pum))
 	return;
 #endif
 

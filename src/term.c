@@ -3268,7 +3268,7 @@ set_shellsize(int width, int height, int mustset)
 	    {
 		update_topline();
 #if defined(FEAT_INS_EXPAND)
-		if (pum_visible())
+		if (pum_visible(&compl_pum))
 		{
 		    redraw_later(NOT_VALID);
 		    ins_compl_show_pum(); /* This includes the redraw. */
