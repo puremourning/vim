@@ -3134,7 +3134,35 @@ typedef struct
     char_u	*pum_kind;	/* extra kind text (may be truncated) */
     char_u	*pum_extra;	/* extra menu text (may be truncated) */
     char_u	*pum_info;	/* extra info */
+    int          hl_range_text_start;
+    int          hl_range_text_len;
 } pumitem_T;
+
+/*
+ * A single popup menu that might be displayed.
+ */
+typedef struct {
+    pumitem_T *pum_array;	/* items of displayed pum */
+    int pum_size;			/* nr of items in "pum_array" */
+    int pum_selected;		/* index of selected item or -1 */
+    int pum_first;		/* index of top item */
+
+    int pum_height;			/* nr of displayed pum items */
+    int pum_width;			/* width of displayed pum items */
+    int pum_base_width;		/* width of pum items base */
+    int pum_kind_width;		/* width of pum items kind column */
+    int pum_scrollbar;		/* TRUE when scrollbar present */
+
+    int pum_row;			/* top row of pum */
+    int pum_col;			/* left column of pum */
+
+    int pum_do_redraw;	/* do redraw anyway */
+} pum_T;
+
+/* The completion popup menu. This is the main popup menu */
+extern pum_T compl_pum;
+/* The parameter hint popup menu. Used for, e.g. function signatures */
+extern pum_T hint_pum;
 
 /*
  * Structure used for get_tagfname().

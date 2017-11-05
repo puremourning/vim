@@ -1,8 +1,12 @@
 /* popupmnu.c */
-void pum_display(pumitem_T *array, int size, int selected);
-void pum_redraw(void);
-void pum_undisplay(void);
-void pum_clear(void);
-int pum_visible(void);
-int pum_get_height(void);
+void pum_display(pum_T* pum,
+                 int invert_position,
+                 pumitem_T *array,
+                 int size,
+                 int selected);
+void pum_redraw(pum_T* pum);
+void pum_undisplay(pum_T* pum);
+void pum_clear(pum_T* pum);
+int pum_visible(pum_T* pum);
+int pum_get_height(pum_T* pum);
 /* vim: set ft=c : */

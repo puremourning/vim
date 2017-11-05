@@ -14,23 +14,10 @@
 
 #if defined(FEAT_INS_EXPAND) || defined(PROTO)
 
-static pumitem_T *pum_array = NULL;	/* items of displayed pum */
-static int pum_size;			/* nr of items in "pum_array" */
-static int pum_selected;		/* index of selected item or -1 */
-static int pum_first = 0;		/* index of top item */
+pum_T compl_pum = {};
+pum_T hint_pum = {};
 
-static int pum_height;			/* nr of displayed pum items */
-static int pum_width;			/* width of displayed pum items */
-static int pum_base_width;		/* width of pum items base */
-static int pum_kind_width;		/* width of pum items kind column */
-static int pum_scrollbar;		/* TRUE when scrollbar present */
-
-static int pum_row;			/* top row of pum */
-static int pum_col;			/* left column of pum */
-
-static int pum_do_redraw = FALSE;	/* do redraw anyway */
-
-static int pum_set_selected(int n, int repeat);
+static int pum_set_selected(pum_T* pum, int n, int repeat);
 
 #define PUM_DEF_HEIGHT 10
 #define PUM_DEF_WIDTH  15
@@ -43,6 +30,8 @@ static int pum_set_selected(int n, int repeat);
  */
     void
 pum_display(
+    pum_T       *pum,
+    int         invert_position,
     pumitem_T	*array,
     int		size,
     int		selected)	/* index of initially selected item, none if
@@ -74,9 +63,9 @@ redo:
 
     /* Pretend the pum is already there to avoid that must_redraw is set when
      * 'cuc' is on. */
-    pum_array = (pumitem_T *)1;
+    pum->pum_array = (pumitem_T *)1;
     validate_cursor_col();
-    pum_array = NULL;
+    pum->pum_array = NULL;
 
     row = curwin->w_wrow + W_WINROW(curwin);
 
@@ -93,20 +82,32 @@ redo:
     }
 #endif
 
+    /* Put the pum below "row" if possible.  If there are few lines decide on
+     * where there is more room. */
+    enum { ABOVE_ROW, BELOW_ROW } position  = BELOW_ROW;
+
     /*
      * Figure out the size and position of the pum.
      */
     if (size < PUM_DEF_HEIGHT)
-	pum_height = size;
+	pum->pum_height = size;
     else
-	pum_height = PUM_DEF_HEIGHT;
-    if (p_ph > 0 && pum_height > p_ph)
-	pum_height = p_ph;
+	pum->pum_height = PUM_DEF_HEIGHT;
+    if (p_ph > 0 && pum->pum_height > p_ph)
+	pum->pum_height = p_ph;
+
+    // TODO(Ben): This doesn't really work, they may still overlap. You kind of
+    // need this method to handle both pums (to guess the best layout)
+    if (invert_position)
+    {
+	position = ABOVE_ROW;
+    }
 
     /* Put the pum below "row" if possible.  If there are few lines decide on
      * where there is more room. */
-    if (row + 2 >= below_row - pum_height
-			    && row - above_row > (below_row - above_row) / 2)
+    if (position == ABOVE_ROW ||
+	(row + 2 >= below_row - pum->pum_height
+			    && row - above_row > (below_row - above_row) / 2))
     {
 	/* pum above "row" */
 
@@ -118,18 +119,18 @@ redo:
 
 	if (row >= size + context_lines)
 	{
-	    pum_row = row - size - context_lines;
-	    pum_height = size;
+	    pum->pum_row = row - size - context_lines;
+	    pum->pum_height = size;
 	}
 	else
 	{
-	    pum_row = 0;
-	    pum_height = row - context_lines;
+	    pum->pum_row = 0;
+	    pum->pum_height = row - context_lines;
 	}
-	if (p_ph > 0 && pum_height > p_ph)
+	if (p_ph > 0 && pum->pum_height > p_ph)
 	{
-	    pum_row += pum_height - p_ph;
-	    pum_height = p_ph;
+	    pum->pum_row += pum->pum_height - p_ph;
+	    pum->pum_height = p_ph;
 	}
     }
     else
@@ -143,25 +144,41 @@ redo:
 	    context_lines = curwin->w_cline_row
 				+ curwin->w_cline_height - curwin->w_wrow;
 
-	pum_row = row + context_lines;
-	if (size > below_row - pum_row)
-	    pum_height = below_row - pum_row;
+	pum->pum_row = row + context_lines;
+	if (size > below_row - pum->pum_row)
+	    pum->pum_height = below_row - pum->pum_row;
 	else
-	    pum_height = size;
-	if (p_ph > 0 && pum_height > p_ph)
-	    pum_height = p_ph;
+	    pum->pum_height = size;
+	if (p_ph > 0 && pum->pum_height > p_ph)
+	    pum->pum_height = p_ph;
     }
 
     /* don't display when we only have room for one line */
-    if (pum_height < 1 || (pum_height == 1 && size > 1))
+    if (pum->pum_height < 1 || (pum->pum_height == 1 && size > 1))
 	return;
+
+    // TODO(Ben): Don't display inverted orientation when it would overlap the
+    // "standard" orientation
+    //
+    // TODO(Ben): To make this work, we do actually need to combine the drawing
+    // of the 2 pums (but we can keep their data separate).
+    static int GUESS_PUM_HEIGHT = -1;
+    if ( GUESS_PUM_HEIGHT < 0 )
+	GUESS_PUM_HEIGHT = MAX( PUM_DEF_HEIGHT, p_ph );
+
+    if ( invert_position
+	      && (row + 2 >= below_row - GUESS_PUM_HEIGHT
+	  	    && row - above_row > (below_row - above_row) / 2))
+    {
+	return;
+    }
 
 #if defined(FEAT_WINDOWS) && defined(FEAT_QUICKFIX)
     /* If there is a preview window at the above avoid drawing over it. */
-    if (pvwin != NULL && pum_row < above_row && pum_height > above_row)
+    if (pvwin != NULL && pum->pum_row < above_row && pum->pum_height > above_row)
     {
-	pum_row += above_row;
-	pum_height -= above_row;
+	pum->pum_row += above_row;
+	pum->pum_height -= above_row;
     }
 #endif
 
@@ -184,8 +201,8 @@ redo:
 		extra_width = w;
 	}
     }
-    pum_base_width = max_width;
-    pum_kind_width = kind_width;
+    pum->pum_base_width = max_width;
+    pum->pum_kind_width = kind_width;
 
     /* Calculate column */
 #ifdef FEAT_RIGHTLEFT
@@ -196,13 +213,13 @@ redo:
 	col = W_WINCOL(curwin) + curwin->w_wcol;
 
     /* if there are more items than room we need a scrollbar */
-    if (pum_height < size)
+    if (pum->pum_height < size)
     {
-	pum_scrollbar = 1;
+	pum->pum_scrollbar = 1;
 	++max_width;
     }
     else
-	pum_scrollbar = 0;
+	pum->pum_scrollbar = 0;
 
     if (def_width < max_width)
 	def_width = max_width;
@@ -215,21 +232,21 @@ redo:
        ))
     {
 	/* align pum column with "col" */
-	pum_col = col;
+	pum->pum_col = col;
 
 #ifdef FEAT_RIGHTLEFT
 	if (curwin->w_p_rl)
-	    pum_width = pum_col - pum_scrollbar + 1;
+	    pum->pum_width = pum->pum_col - pum->pum_scrollbar + 1;
 	else
 #endif
-	    pum_width = Columns - pum_col - pum_scrollbar;
+	    pum->pum_width = Columns - pum->pum_col - pum->pum_scrollbar;
 
-	if (pum_width > max_width + kind_width + extra_width + 1
-						 && pum_width > PUM_DEF_WIDTH)
+	if (pum->pum_width > max_width + kind_width + extra_width + 1
+					     && pum->pum_width > PUM_DEF_WIDTH)
 	{
-	    pum_width = max_width + kind_width + extra_width + 1;
-	    if (pum_width < PUM_DEF_WIDTH)
-		pum_width = PUM_DEF_WIDTH;
+	    pum->pum_width = max_width + kind_width + extra_width + 1;
+	    if (pum->pum_width < PUM_DEF_WIDTH)
+		pum->pum_width = PUM_DEF_WIDTH;
 	}
     }
     else if (Columns < def_width)
@@ -237,11 +254,11 @@ redo:
 	/* not enough room, will use what we have */
 #ifdef FEAT_RIGHTLEFT
 	if (curwin->w_p_rl)
-	    pum_col = Columns - 1;
+	    pum->pum_col = Columns - 1;
 	else
 #endif
-	    pum_col = 0;
-	pum_width = Columns - 1;
+	    pum->pum_col = 0;
+	pum->pum_width = Columns - 1;
     }
     else
     {
@@ -249,20 +266,20 @@ redo:
 	    max_width = PUM_DEF_WIDTH;	/* truncate */
 #ifdef FEAT_RIGHTLEFT
 	if (curwin->w_p_rl)
-	    pum_col = max_width - 1;
+	    pum->pum_col = max_width - 1;
 	else
 #endif
-	    pum_col = Columns - max_width;
-	pum_width = max_width - pum_scrollbar;
+	    pum->pum_col = Columns - max_width;
+	pum->pum_width = max_width - pum->pum_scrollbar;
     }
 
-    pum_array = array;
-    pum_size = size;
+    pum->pum_array = array;
+    pum->pum_size = size;
 
     /* Set selected item and redraw.  If the window size changed need to redo
      * the positioning.  Limit this to two times, when there is not much
      * room the window size will keep changing. */
-    if (pum_set_selected(selected, redo_count) && ++redo_count <= 2)
+    if (pum_set_selected(pum, selected, redo_count) && ++redo_count <= 2)
 	goto redo;
 }
 
@@ -270,9 +287,9 @@ redo:
  * Redraw the popup menu, using "pum_first" and "pum_selected".
  */
     void
-pum_redraw(void)
+pum_redraw(pum_T* pum)
 {
-    int		row = pum_row;
+    int		row = pum->pum_row;
     int		col;
     int		attr_norm = highlight_attr[HLF_PNI];
     int		attr_select = highlight_attr[HLF_PSI];
@@ -290,39 +307,43 @@ pum_redraw(void)
     int		n;
 
     /* Never display more than we have */
-    if (pum_first > pum_size - pum_height)
-	pum_first = pum_size - pum_height;
+    if (pum->pum_first > pum->pum_size - pum->pum_height)
+	pum->pum_first = pum->pum_size - pum->pum_height;
 
-    if (pum_scrollbar)
+    if (pum->pum_scrollbar)
     {
-	thumb_heigth = pum_height * pum_height / pum_size;
+	thumb_heigth = pum->pum_height * pum->pum_height / pum->pum_size;
 	if (thumb_heigth == 0)
 	    thumb_heigth = 1;
-	thumb_pos = (pum_first * (pum_height - thumb_heigth)
-			    + (pum_size - pum_height) / 2)
-						    / (pum_size - pum_height);
+	thumb_pos = (pum->pum_first * (pum->pum_height - thumb_heigth)
+			    + (pum->pum_size - pum->pum_height) / 2)
+					    / (pum->pum_size - pum->pum_height);
     }
 
-    for (i = 0; i < pum_height; ++i)
+    for (i = 0; i < pum->pum_height; ++i)
     {
-	idx = i + pum_first;
-	attr = (idx == pum_selected) ? attr_select : attr_norm;
+	idx = i + pum->pum_first;
+
+	// TODO(Ben): This is what controls the highlighting group applied to
+	// the pum. If we want to do something clever, it lives within this
+	// loop.
+	attr = (idx == pum->pum_selected) ? attr_select : attr_norm;
 
 	/* prepend a space if there is room */
 #ifdef FEAT_RIGHTLEFT
 	if (curwin->w_p_rl)
 	{
-	    if (pum_col < W_WINCOL(curwin) + W_WIDTH(curwin) - 1)
-		screen_putchar(' ', row, pum_col + 1, attr);
+	    if (pum->pum_col < W_WINCOL(curwin) + W_WIDTH(curwin) - 1)
+		screen_putchar(' ', row, pum->pum_col + 1, attr);
 	}
 	else
 #endif
-	    if (pum_col > 0)
-		screen_putchar(' ', row, pum_col - 1, attr);
+	    if (pum->pum_col > 0)
+		screen_putchar(' ', row, pum->pum_col - 1, attr);
 
 	/* Display each entry, use two spaces for a Tab.
 	 * Do this 3 times: For the main text, kind and extra info */
-	col = pum_col;
+	col = pum->pum_col;
 	totwidth = 0;
 	for (round = 1; round <= 3; ++round)
 	{
@@ -330,17 +351,48 @@ pum_redraw(void)
 	    s = NULL;
 	    switch (round)
 	    {
-		case 1: p = pum_array[idx].pum_text; break;
-		case 2: p = pum_array[idx].pum_kind; break;
-		case 3: p = pum_array[idx].pum_extra; break;
+		case 1: p = pum->pum_array[idx].pum_text; break;
+		case 2: p = pum->pum_array[idx].pum_kind; break;
+		case 3: p = pum->pum_array[idx].pum_extra; break;
 	    }
 	    if (p != NULL)
-		for ( ; ; mb_ptr_adv(p))
+	    {
+		int charsdone = 0;
+		for ( ; ; mb_ptr_adv(p), ++charsdone)
 		{
+		    int the_attr = attr;
+		    int brk_here = FALSE;
 		    if (s == NULL)
 			s = p;
 		    w = ptr2cells(p);
-		    if (*p == NUL || *p == TAB || totwidth + w > pum_width)
+		    if (round == 1 && pum->pum_array[idx].hl_range_text_len > 0)
+		    {
+			if (charsdone >
+				    pum->pum_array[idx].hl_range_text_start &&
+			    charsdone <
+				    pum->pum_array[idx].hl_range_text_start +
+				    pum->pum_array[idx].hl_range_text_len)
+			{
+			    // toggle the attribute for the highlighted range
+			    the_attr = ( attr == attr_select ? attr_norm
+							     : attr_select );
+			}
+			if (charsdone ==
+				    pum->pum_array[idx].hl_range_text_start)
+			{
+			    brk_here = TRUE;
+			}
+			else if(charsdone ==
+				    pum->pum_array[idx].hl_range_text_start +
+				    pum->pum_array[idx].hl_range_text_len - 1)
+			{
+			    brk_here = TRUE;
+			}
+		    }
+		    if (brk_here ||
+			*p == NUL ||
+			*p == TAB ||
+			totwidth + w > pum->pum_width)
 		    {
 			/* Display the text that fits or comes before a Tab.
 			 * First convert it to printable characters. */
@@ -363,16 +415,16 @@ pum_redraw(void)
 				    int		size;
 
 				    size = vim_strsize(rt);
-				    if (size > pum_width)
+				    if (size > pum->pum_width)
 				    {
 					do
 					{
 					    size -= has_mbyte
 						    ? (*mb_ptr2cells)(rt) : 1;
 					    mb_ptr_adv(rt);
-					} while (size > pum_width);
+					} while (size > pum->pum_width);
 
-					if (size < pum_width)
+					if (size < pum->pum_width)
 					{
 					    /* Most left character requires
 					     * 2-cells but only 1 cell is
@@ -384,7 +436,7 @@ pum_redraw(void)
 					}
 				    }
 				    screen_puts_len(rt, (int)STRLEN(rt),
-						   row, col - size + 1, attr);
+					       row, col - size + 1, the_attr);
 				    vim_free(rt_start);
 				}
 				vim_free(st);
@@ -396,85 +448,105 @@ pum_redraw(void)
 			{
 			    if (st != NULL)
 			    {
+				// TODO(Ben): This is what actually prints the
+				// text on the screen
 				screen_puts_len(st, (int)STRLEN(st), row, col,
-									attr);
+								the_attr);
 				vim_free(st);
 			    }
 			    col += width;
 			}
 
-			if (*p != TAB)
-			    break;
+			if (!brk_here)
+			{
+			    if (*p != TAB)
+				break;
 
-			/* Display two spaces for a Tab. */
+			    /* Display two spaces for a Tab. */
 #ifdef FEAT_RIGHTLEFT
-			if (curwin->w_p_rl)
-			{
-			    screen_puts_len((char_u *)"  ", 2, row, col - 1,
-									attr);
-			    col -= 2;
-			}
-			else
+			    if (curwin->w_p_rl)
+			    {
+				screen_puts_len((char_u *)"  ", 2, row, col - 1,
+									    attr);
+				col -= 2;
+			    }
+			    else
 #endif
-			{
-			    screen_puts_len((char_u *)"  ", 2, row, col, attr);
-			    col += 2;
+			    {
+				screen_puts_len((char_u *)"  ", 2, row, col, attr);
+				col += 2;
+			    }
+			    totwidth += 2;
 			}
-			totwidth += 2;
 			s = NULL;	    /* start text at next char */
 			width = 0;
 		    }
 		    else
 			width += w;
 		}
+	    }
 
 	    if (round > 1)
-		n = pum_kind_width + 1;
+		n = pum->pum_kind_width + 1;
 	    else
 		n = 1;
 
 	    /* Stop when there is nothing more to display. */
 	    if (round == 3
-		    || (round == 2 && pum_array[idx].pum_extra == NULL)
-		    || (round == 1 && pum_array[idx].pum_kind == NULL
-					  && pum_array[idx].pum_extra == NULL)
-		    || pum_base_width + n >= pum_width)
+		    || (round == 2 && pum->pum_array[idx].pum_extra == NULL)
+		    || (round == 1 && pum->pum_array[idx].pum_kind == NULL
+				   && pum->pum_array[idx].pum_extra == NULL)
+		    || pum->pum_base_width + n >= pum->pum_width)
 		break;
 #ifdef FEAT_RIGHTLEFT
 	    if (curwin->w_p_rl)
 	    {
-		screen_fill(row, row + 1, pum_col - pum_base_width - n + 1,
-						    col + 1, ' ', ' ', attr);
-		col = pum_col - pum_base_width - n + 1;
+		screen_fill(row, row + 1,
+			    pum->pum_col - pum->pum_base_width - n + 1,
+			    col + 1, ' ', ' ', attr);
+		col = pum->pum_col - pum->pum_base_width - n + 1;
 	    }
 	    else
 #endif
 	    {
-		screen_fill(row, row + 1, col, pum_col + pum_base_width + n,
-							      ' ', ' ', attr);
-		col = pum_col + pum_base_width + n;
+		screen_fill(row, row + 1,
+			    col,
+			    pum->pum_col + pum->pum_base_width + n,
+			    ' ',
+			    ' ',
+			    attr);
+		col = pum->pum_col + pum->pum_base_width + n;
 	    }
-	    totwidth = pum_base_width + n;
+	    totwidth = pum->pum_base_width + n;
 	}
 
 #ifdef FEAT_RIGHTLEFT
 	if (curwin->w_p_rl)
-	    screen_fill(row, row + 1, pum_col - pum_width + 1, col + 1, ' ',
-								    ' ', attr);
+	    screen_fill(row, row + 1,
+			pum->pum_col - pum->pum_width + 1,
+			col + 1,
+			' ',
+			' ',
+			attr);
 	else
 #endif
-	    screen_fill(row, row + 1, col, pum_col + pum_width, ' ', ' ',
-									attr);
-	if (pum_scrollbar > 0)
+	    screen_fill(row,
+			row + 1,
+			col,
+			pum->pum_col + pum->pum_width,
+			' ',
+			' ',
+			attr);
+	if (pum->pum_scrollbar > 0)
 	{
 #ifdef FEAT_RIGHTLEFT
 	    if (curwin->w_p_rl)
-		screen_putchar(' ', row, pum_col - pum_width,
+		screen_putchar(' ', row, pum->pum_col - pum->pum_width,
 			i >= thumb_pos && i < thumb_pos + thumb_heigth
 						  ? attr_thumb : attr_scroll);
 	    else
 #endif
-		screen_putchar(' ', row, pum_col + pum_width,
+		screen_putchar(' ', row, pum->pum_col + pum->pum_width,
 			i >= thumb_pos && i < thumb_pos + thumb_heigth
 						  ? attr_thumb : attr_scroll);
 	}
@@ -494,60 +566,61 @@ pum_redraw(void)
  * must be recomputed.
  */
     static int
-pum_set_selected(int n, int repeat)
+pum_set_selected(pum_T* pum, int n, int repeat)
 {
     int	    resized = FALSE;
-    int	    context = pum_height / 2;
+    int	    context = pum->pum_height / 2;
 
-    pum_selected = n;
+    pum->pum_selected = n;
 
-    if (pum_selected >= 0 && pum_selected < pum_size)
+    if (pum->pum_selected >= 0 && pum->pum_selected < pum->pum_size)
     {
-	if (pum_first > pum_selected - 4)
+	if (pum->pum_first > pum->pum_selected - 4)
 	{
 	    /* scroll down; when we did a jump it's probably a PageUp then
 	     * scroll a whole page */
-	    if (pum_first > pum_selected - 2)
+	    if (pum->pum_first > pum->pum_selected - 2)
 	    {
-		pum_first -= pum_height - 2;
-		if (pum_first < 0)
-		    pum_first = 0;
-		else if (pum_first > pum_selected)
-		    pum_first = pum_selected;
+		pum->pum_first -= pum->pum_height - 2;
+		if (pum->pum_first < 0)
+		    pum->pum_first = 0;
+		else if (pum->pum_first > pum->pum_selected)
+		    pum->pum_first = pum->pum_selected;
 	    }
 	    else
-		pum_first = pum_selected;
+		pum->pum_first = pum->pum_selected;
 	}
-	else if (pum_first < pum_selected - pum_height + 5)
+	else if (pum->pum_first < pum->pum_selected - pum->pum_height + 5)
 	{
 	    /* scroll up; when we did a jump it's probably a PageDown then
 	     * scroll a whole page */
-	    if (pum_first < pum_selected - pum_height + 1 + 2)
+	    if (pum->pum_first < pum->pum_selected - pum->pum_height + 1 + 2)
 	    {
-		pum_first += pum_height - 2;
-		if (pum_first < pum_selected - pum_height + 1)
-		    pum_first = pum_selected - pum_height + 1;
+		pum->pum_first += pum->pum_height - 2;
+		if (pum->pum_first < pum->pum_selected - pum->pum_height + 1)
+		    pum->pum_first = pum->pum_selected - pum->pum_height + 1;
 	    }
 	    else
-		pum_first = pum_selected - pum_height + 1;
+		pum->pum_first = pum->pum_selected - pum->pum_height + 1;
 	}
 
 	/* Give a few lines of context when possible. */
 	if (context > 3)
 	    context = 3;
-	if (pum_height > 2)
+	if (pum->pum_height > 2)
 	{
-	    if (pum_first > pum_selected - context)
+	    if (pum->pum_first > pum->pum_selected - context)
 	    {
 		/* scroll down */
-		pum_first = pum_selected - context;
-		if (pum_first < 0)
-		    pum_first = 0;
+		pum->pum_first = pum->pum_selected - context;
+		if (pum->pum_first < 0)
+		    pum->pum_first = 0;
 	    }
-	    else if (pum_first < pum_selected + context - pum_height + 1)
+	    else if (pum->pum_first <
+			    pum->pum_selected + context - pum->pum_height + 1)
 	    {
 		/* scroll up */
-		pum_first = pum_selected + context - pum_height + 1;
+		pum->pum_first = pum->pum_selected + context - pum->pum_height + 1;
 	    }
 	}
 
@@ -559,7 +632,7 @@ pum_set_selected(int n, int repeat)
 	 * Skip this also when there is not much room.
 	 * NOTE: Be very careful not to sync undo!
 	 */
-	if (pum_array[pum_selected].pum_info != NULL
+	if (pum->pum_array[pum->pum_selected].pum_info != NULL
 		&& Rows > 10
 		&& repeat <= 1
 		&& vim_strchr(p_cot, 'p') != NULL)
@@ -617,7 +690,8 @@ pum_set_selected(int n, int repeat)
 		    char_u	*p, *e;
 		    linenr_T	lnum = 0;
 
-		    for (p = pum_array[pum_selected].pum_info; *p != NUL; )
+		    for (p = pum->pum_array[pum->pum_selected].pum_info;
+								*p != NUL; )
 		    {
 			e = vim_strchr(p, '\n');
 			if (e == NULL)
@@ -678,9 +752,9 @@ pum_set_selected(int n, int repeat)
 
 			/* Update the screen before drawing the popup menu.
 			 * Enable updating the status lines. */
-			pum_do_redraw = TRUE;
+			pum->pum_do_redraw = TRUE;
 			update_screen(0);
-			pum_do_redraw = FALSE;
+			pum->pum_do_redraw = FALSE;
 
 			if (!resized && win_valid(curwin_save))
 			{
@@ -691,9 +765,9 @@ pum_set_selected(int n, int repeat)
 
 			/* May need to update the screen again when there are
 			 * autocommands involved. */
-			pum_do_redraw = TRUE;
+			pum->pum_do_redraw = TRUE;
 			update_screen(0);
-			pum_do_redraw = FALSE;
+			pum->pum_do_redraw = FALSE;
 		    }
 		}
 	    }
@@ -702,7 +776,7 @@ pum_set_selected(int n, int repeat)
     }
 
     if (!resized)
-	pum_redraw();
+	pum_redraw(pum);
 
     return resized;
 }
@@ -711,9 +785,9 @@ pum_set_selected(int n, int repeat)
  * Undisplay the popup menu (later).
  */
     void
-pum_undisplay(void)
+pum_undisplay(pum_T* pum)
 {
-    pum_array = NULL;
+    pum->pum_array = NULL;
     redraw_all_later(SOME_VALID);
 #ifdef FEAT_WINDOWS
     redraw_tabline = TRUE;
@@ -726,9 +800,9 @@ pum_undisplay(void)
  * displayed item.
  */
     void
-pum_clear(void)
+pum_clear(pum_T* pum)
 {
-    pum_first = 0;
+    pum->pum_first = 0;
 }
 
 /*
@@ -736,9 +810,9 @@ pum_clear(void)
  * Overruled when "pum_do_redraw" is set, used to redraw the status lines.
  */
     int
-pum_visible(void)
+pum_visible(pum_T* pum)
 {
-    return !pum_do_redraw && pum_array != NULL;
+    return !pum->pum_do_redraw && pum->pum_array != NULL;
 }
 
 /*
@@ -746,9 +820,9 @@ pum_visible(void)
  * Only valid when pum_visible() returns TRUE!
  */
     int
-pum_get_height(void)
+pum_get_height(pum_T* pum)
 {
-    return pum_height;
+    return pum->pum_height;
 }
 
 #endif
