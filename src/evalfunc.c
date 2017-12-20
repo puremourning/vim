@@ -61,6 +61,8 @@ static void f_atan2(typval_T *argvars, typval_T *rettv);
 #endif
 #ifdef FEAT_BEVAL
 static void f_balloon_show(typval_T *argvars, typval_T *rettv);
+static void f_balloon_hide(typval_T *argvars, typval_T *rettv);
+static void f_balloon_visible(typval_T *argvars, typval_T *rettv);
 # if defined(FEAT_BEVAL_TERM)
 static void f_balloon_split(typval_T *argvars, typval_T *rettv);
 # endif
@@ -497,7 +499,9 @@ static struct fst
     {"atan2",		2, 2, f_atan2},
 #endif
 #ifdef FEAT_BEVAL
-    {"balloon_show",	1, 1, f_balloon_show},
+    {"balloon_hide",	0, 0, f_balloon_hide},
+    {"balloon_show",	1, 3, f_balloon_show},
+    {"balloon_visible",	0, 0, f_balloon_visible},
 # if defined(FEAT_BEVAL_TERM)
     {"balloon_split",	1, 1, f_balloon_split},
 # endif
@@ -1411,13 +1415,28 @@ f_atan2(typval_T *argvars, typval_T *rettv)
 #endif
 
 /*
- * "balloon_show()" function
+ * "balloon_show( message, [line, col] )" function
  */
 #ifdef FEAT_BEVAL
     static void
 f_balloon_show(typval_T *argvars, typval_T *rettv UNUSED)
 {
-    if (balloonEval != NULL)
+    linenr_T line;
+    colnr_T col;
+    if (argvars[1].v_type != VAR_UNKNOWN && argvars[2].v_type != VAR_UNKNOWN)
+    {
+	line = get_tv_number_chk(&argvars[1], NULL);
+	col = get_tv_number_chk(&argvars[2], NULL);
+	if (argvars[0].v_type == VAR_LIST
+# ifdef FEAT_GUI
+		&& !gui.in_use
+# endif
+	   )
+	    post_balloon_at(line, col, NULL, argvars[0].vval.v_list);
+	else
+	    post_balloon_at(line, col, get_tv_string_chk(&argvars[0]), NULL);
+    }
+    else if (balloonEval != NULL)
     {
 	if (argvars[0].v_type == VAR_LIST
 # ifdef FEAT_GUI
@@ -1428,6 +1447,21 @@ f_balloon_show(typval_T *argvars, typval_T *rettv UNUSED)
 	else
 	    post_balloon(balloonEval, get_tv_string_chk(&argvars[0]), NULL);
     }
+}
+
+    static void
+f_balloon_hide(typval_T *argvars, typval_T *rettv UNUSED)
+{
+    // TODO: HAAACK
+    ui_remove_balloon();
+}
+
+    static void
+f_balloon_visible(typval_T *argvars, typval_T *rettv)
+{
+    // TODO: LIES
+    rettv->v_type = VAR_NUMBER;
+    rettv->vval.v_number = 0;
 }
 
 # if defined(FEAT_BEVAL_TERM)

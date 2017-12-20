@@ -926,6 +926,12 @@ ui_remove_balloon(void)
     void
 ui_post_balloon(char_u *mesg, list_T *list)
 {
+    ui_post_balloon_at(mouse_row, mouse_col, mesg, list);
+}
+
+    void
+ui_post_balloon_at(linenr_T line, colnr_T col, char_u *mesg, list_T *list)
+{
     ui_remove_balloon();
 
     if (mesg == NULL && list == NULL)
@@ -959,27 +965,27 @@ ui_post_balloon(char_u *mesg, list_T *list)
 	pum_scrollbar = 0;
 	pum_height = balloon_arraysize;
 
-	if (Rows - mouse_row > pum_size)
+	if (Rows - line > pum_size)
 	{
 	    /* Enough space below the mouse row. */
-	    pum_row = mouse_row + 1;
+	    pum_row = line + 1;
 	    if (pum_height > Rows - pum_row)
 		pum_height = Rows - pum_row;
 	}
 	else
 	{
 	    /* Show above the mouse row, reduce height if it does not fit. */
-	    pum_row = mouse_row - pum_size;
+	    pum_row = line - pum_size;
 	    if (pum_row < 0)
 	    {
 		pum_height += pum_row;
 		pum_row = 0;
 	    }
 	}
-	if (Columns - mouse_col >= pum_base_width
-		|| Columns - mouse_col > BALLOON_MIN_WIDTH)
+	if (Columns - col >= pum_base_width
+		|| Columns - col > BALLOON_MIN_WIDTH)
 	    /* Enough space to show at mouse column. */
-	    pum_col = mouse_col;
+	    pum_col = col;
 	else
 	    /* Not enough space, right align with window. */
 	    pum_col = Columns - (pum_base_width > BALLOON_MIN_WIDTH
