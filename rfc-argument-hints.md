@@ -6,6 +6,10 @@ editors. The proposal is to allow scripts to control this (such as on insert of
 `(` and `)` characters) and for it to be non-interractive and not to interfere
 with insert-mode completion.
 
+The purpose of the RFC is to guage the appetite from Bram and the community for
+such a feature, and to discuss the design/functional behaviours prior to
+committing to an implementation/etc.
+
 # Motivation
 
 There are a number of Vim plugins which attempt to provide some IDE-like
@@ -23,12 +27,16 @@ insert-mode completion that is built-in. Examples:
 
 In their simplest form, these provide a list of identifiers which are
 semantically valid to be inserted at the current cursor position (or the result
-of the equivalent of omnifunc's 'findstart' request).
+of the equivalent of omnifunc's 'findstart' request), using the insert-mode
+completion APIs provided by Vim.
 
-I happen to be one of the maintainers of YouCompleteMe, and a daily user of it.
 One of the most commonly requested features for YouCompleteMe is the ability to
-display, as well as semantically correct identifiers, the valid arguments for
-function calls.
+display the valid arguments for function calls, as well as semantically correct
+identifiers. This feature is known as "argument hints", "parameter
+completions", "signature help" or suchlike. 
+[Microsoft's Language Server Protocol][lsp] refers to them as "Signature Help".
+
+# Illustrative example
 
 For example, the user types something like the following, with the cursor on
 `^`:
@@ -43,6 +51,10 @@ typedef struct pum_T
 } pum;
 
 void pum_display_item( pum_T* pum,
+                       char_u* message,
+                       pumitem_T* item_list );
+
+void pum_display_item( pum_T* pum,
                        int selected_item,
                        pumitem_T* item );
 
@@ -54,20 +66,24 @@ void main(void)
 
 ```
 
-Current completion systems would typically present a popup menu with the valid
-options from the definition, such as:
+Current completion systems (or omni-completion, invoked with `<C-x><C-o>`) would
+typically present a popup menu with the valid options from the definition,
+such as:
 
-- int pum_selected 
-- int pum_item_count
+- `int pum_selected`
+- `int pum_item_count`
 
-Typically, however, methods have many more arguments than this toy example, and
-the declaration is not likely visible. Instead, many IDEs and other editors
-provide a second "popup" when the user types the `(`. Typically this is _above_
-rather than below the current line and contains the list of overloads of the
-fucntion and their arguments, often highlighting (one way or another) the
-"current" argument being entered. For example, it might look like this:
+Methods often have many more arguments than this toy example, and
+the declaration is not likely visible when it is used. Instead, many IDEs and
+other editors provide a second "popup" when the user types the `(`. Typically,
+this is _above_ rather than below the current line and contains the list of
+overloads of the fucntion and their arguments, often highlighting (one way or
+another) the "current" argument being entered.
+
+For example, it might look like this:
 
     |------------------------------------------------------------------------|
+    | pum_display_item( pum_T* pum, **char_u *message**, pumitem_T* item )   |
     | pum_display_item( pum_T* pum, **int selected_item**, pumitem_T* item ) |
     |------------------------------------------------------------------------|
     pum_display_item( pum, pum.^
@@ -76,28 +92,36 @@ fucntion and their arguments, often highlighting (one way or another) the
                                | int pum_item_count   int  |
                                |---------------------------|
 
-# Known existing approaches/attempts
+# Known existing attempts in Vim
 
-- The preview window.
+- **The preview window.**
   By using the extra data in the completion menu item structure, we can show
   some static information in the preview window. The drawbacks are that the
   preview window has to always be visible (taking up valuable screen real
-  estate), or it pops in and out of visibility, causing the current column to
+  estate), or it pops in and out of visibility, causing the current row to
   shift disconcertingly on the screen. Requires `preview` in the `completeopt`
   and other autocmds etc. to show/hide it. Cursor moving into and out of
   the preview window triggers `BufEnter` autocoms, which causes meaningful lag
   when the completion menu is visible (OK, this could be blamed mostly on the
   plugins using `BufEnter` autocommand, but you get the picture).
 
-- Oblitum/YouCompleteMe.
+- **Oblitum/YouCompleteMe.**
   This is an approach using the standard PUM 100% with no hacks. The drawback is
   that only the current argument is displayed, and mutually exclusively with
   suggestions for the current identifier.
-  
-- jedi-vim.
-  Horrible hack using either command line or conceal highlighting.
 
-- a YouCompleteMe test which also uses the command line (experience is *bad*)
+- a YouCompleteMe test which also uses the command line (user experience is not
+  good using the command line, as the text can be clobbered by other things,
+  timers, etc.)
+  
+- **jedi-vim.**
+  A python omnifunc plugin uses conceal highlighting to simulate a second menu.
+  The conceal apprach seems to involve actually changing the buffer contents and
+  relying on special highlight groups to make the _appearance_ of a second
+  "menu".  Ingenious, perhaps, but probably not fun to implement or maintain.
+  With no disrespect to the author, it seems like a hack.
+
+There are probably others; I just listed the ones I researched.
 
 # Proposal
 
@@ -145,13 +169,20 @@ displayed.
 
 ## Content
 
-The contents of the hint menu are at the discretion of the script. Borrowing
-from the approach taken for balloons, the menu supports a list of strings, but
-does not perform any additional formatting.
+Discussion point: This is open for debate and I would love to hear thoughts on
+it. I see there are a couple of options here:
 
-Discussion point: or popupmenu items? Or perhaps we should go all out and make
-it _strictly_ parameter hints, and have a specific "hint" item ? Certainly the
-latter would make formatting easier.
+1. **"Pass-through"**.  The contents of the hint menu are at the discretion of
+   the script. Borrowing from the approach taken for balloons, the menu supports
+   a list of strings, but does not perform any additional formatting (such as
+   spacing/splitting).
+
+2. **"Call a spoon a spoon"**. The purpose of the feature is argument hints, so
+   we make the API specific to that. Anything else is YAGNI.
+   e.g. The API is passed a list of signatures, including the active signature
+   and argument. Vim then handles the display and highlighting, allowing the
+   script interface to be relatively simple, while restricting (perhaps) the
+   amount of innovation.
 
 # Implementation
 
@@ -190,10 +221,28 @@ Here's a (very) brief idea of how I _think_ it could be done:
   - hint the hint pum when exiting insert mode (and probably a load of other
     things i haven't thought of)
 
-- Phase 3, allow hint menu to contain formatting or style information
-  - Details sketchy, but it should be possible to embed something, perhaps using
-    magic string markers, syntax highlighting rules or something along those
-    lines.
-  - the purpose is to be able to highlight the "current" argument
-  - if we go for the hint_pum_set argument as a parameter-hint-specific set of
-    things, this might be simpler
+- Phase 3, allow hint menu to highlight the current argument
+  - Details sketchy, as they depend on some of the previous discussion points.
+  - One option is to embed something, perhaps using magic string markers in the
+    menu input strings, to "bold" some section.
+  - Another option might be to somehow use new specific highlighting groups,
+    or something along those lines, combined with knowledge about which argument
+    is selected.
+
+# Comments
+
+I'd welcome comments on anything including:
+
+- The welcomeness/appetite for such functionality
+- The generality of the proposal (or otherwise)
+- The overall approach, related ideas/works/etc.
+- Niggly bikeshedding; the more the merrirer
+
+Of course nothing is set in stone at this stage, but I did write a proof of
+concept about 12 months ago as part of the research into the idea.
+
+Some demos are attached to the gist as comments. I can point to the code in
+Vim and YouCompleteMe, but it is very hacky and exploratorys, so it would be
+completely re-engineered before any PR/patch is sent.
+
+[lsp]: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#textDocument_signatureHelp
