@@ -1191,6 +1191,40 @@ func Test_nocatch_wipe_dummy_buffer()
   au!
 endfunc
 
+function! s:CompleteDone_CompleteFuncList( findstart, base )
+  if a:findstart
+    return 0
+  endif
+
+  return [ 'aword' ]
+endfunction
+
+function! s:CompleteDone_CheckCompletedItemList()
+  call assert_equal( 'aword', v:completed_item[ 'word' ] )
+  call assert_equal( '',      v:completed_item[ 'abbr' ] )
+  call assert_equal( '',      v:completed_item[ 'menu' ] )
+  call assert_equal( '',      v:completed_item[ 'info' ] )
+  call assert_equal( '',      v:completed_item[ 'kind' ] )
+  call assert_equal( '',      v:completed_item[ 'user_data' ] )
+
+  let s:called_completedone=1
+endfunction
+
+function Test_CompleteDoneList()
+  au CompleteDone * :call <SID>CompleteDone_CheckCompletedItemList()
+
+  set completefunc=<SID>CompleteDone_CompleteFuncList
+  execute "normal a\<C-X>\<C-U>\<C-Y>"
+  set completefunc&
+
+  call assert_equal( '', v:completed_item[ 'user_data' ] )
+  call assert_true( s:called_completedone )
+
+  let s:called_completedone=0
+  au! CompleteDone
+  %bwipeout!
+endfunc
+
 function! s:CompleteDone_CompleteFuncDict( findstart, base )
   if a:findstart
     return 0
