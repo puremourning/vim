@@ -1221,6 +1221,9 @@ function! s:CompleteDone_CheckCompletedItemDict()
   let s:called_completedone=1
 endfunction
 
+function Test_CompleteDoneList()
+endfunc
+
 function Test_CompleteDoneDict()
   au CompleteDone * :call <SID>CompleteDone_CheckCompletedItemDict()
 
@@ -1233,7 +1236,4 @@ function Test_CompleteDoneDict()
 
   let s:called_completedone=0
   au! CompleteDone
-endfunc
-
-function Test_CompleteDoneList()
 endfunc
