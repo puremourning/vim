@@ -1235,6 +1235,3 @@ function Test_CompleteDoneDict()
   au! CompleteDone
   %bwipeout!
 endfunc
-
-function Test_Anothername()
-endfunc
