@@ -1236,5 +1236,4 @@ function Test_CompleteDoneDict()
 endfunc
 
 function Test_CompleteDoneList()
-  execute "normal a\<C-X>\<C-U>\<C-Y>"
 endfunc
