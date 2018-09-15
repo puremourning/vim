@@ -582,8 +582,6 @@ update_screen(int type_arg)
 
     if (must_redraw)
     {
-	// TODO(Ben): When we call update_screen(0) from ins_compl_upd_pum,
-	// we assume the value of must_redraw if it is nonzero
 	if (type < must_redraw)	    /* use maximal type */
 	    type = must_redraw;
 

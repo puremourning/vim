@@ -281,7 +281,9 @@ static char_u *do_insert_char_pre(int c);
 #endif
 static int ins_apply_autocmds(event_T event);
 
+#if defined(FEAT_INS_EXPAND)
 static void ins_hint_draw(void);
+#endif
 
 static colnr_T	Insstart_textlen;	/* length of line when insert started */
 static colnr_T	Insstart_blank_vcol;	/* vcol for first inserted blank */
@@ -3013,7 +3015,7 @@ set_completion(colnr_T startcol, list_T *list)
     out_flush();
 }
 
-
+#if defined(FEAT_INS_EXPAND)
 /* "compl_match_array" points the currently displayed list of entries in the
  * popup menu.  It is NULL when there is no popup menu. */
 static pumitem_T *compl_match_array = NULL;
@@ -3029,15 +3031,11 @@ static void ins_hint_free( int free_array )
 {
     for(int i = 0; i<hint_match_arraysize; ++i)
     {
-	vim_free( hint_match_array[i].pum_text );
-	vim_free( hint_match_array[i].pum_info );
-	vim_free( hint_match_array[i].pum_kind );
-	vim_free( hint_match_array[i].pum_extra );
+	VIM_CLEAR(hint_match_array[i].pum_text);
+	VIM_CLEAR(hint_match_array[i].pum_info);
+	VIM_CLEAR(hint_match_array[i].pum_kind);
+	VIM_CLEAR(hint_match_array[i].pum_extra);
 
-	hint_match_array[i].pum_text = NULL;
-	hint_match_array[i].pum_info = NULL;
-	hint_match_array[i].pum_kind = NULL;
-	hint_match_array[i].pum_extra = NULL;
     }
 
     if ( free_array )
@@ -3050,7 +3048,6 @@ static void ins_hint_free( int free_array )
 
 void ins_hint_start(colnr_T startcol, list_T* list)
 {
-    // TODO(Ben): Make this code-style compatible.
     ins_hint_set_hints(startcol, list);
 
     ins_hint_draw();
@@ -3067,12 +3064,6 @@ void ins_hint_draw(void)
 	/* Compute the screen column of the start of the completed text.
 	 * Use the cursor to get all wrapping and other settings right. */
 
-	// TODO(Ben): We should set this to the column where the trigger
-	// occurred (e.g. the open bracket)
-	// That is, when we have any idea how to achieve that. Given that ctrl-x
-	// mode is horrendously complicated, I think we want to avoid it. There
-	// are no key combinations associated with hints, so perhaps all we need
-	// is to expose vimscript which controls when to show/hide the hint
 	int col = curwin->w_cursor.col;
 	curwin->w_cursor.col = hint_match_startcol;
 
@@ -3097,14 +3088,6 @@ void ins_hint_set_hints(int startcol, list_T* list)
     }
     else if (list->lv_len != hint_match_arraysize)
     {
-	// TODO(Ben): It seems that if we reallocate this here, Vim crashes.
-	// Investigate why, and prevent the fucking leak!
-	//
-	// TODO(Ben): It is _probably_ the actual string values that need to
-	// persist, though... for how long? Until after the next call to
-	// pum_display() ? Perhaps so. Perhaps it is not legal to cal pum_redraw
-	// on old data. Perhaps we should return from this method that a redraw
-	// will no longer be valid.
 	ins_hint_free( TRUE );
 
 	hint_match_arraysize = list->lv_len;
@@ -3114,11 +3097,6 @@ void ins_hint_set_hints(int startcol, list_T* list)
     else
     {
 	ins_hint_free( FALSE );
-
-	// TODO(Ben): THe following isn't strictly necessary
-	vim_memset( hint_match_array,
-		    0,
-		    (unsigned)(sizeof(pumitem_T) * hint_match_arraysize) );
     }
 
     hint_match_startcol = startcol;
@@ -3128,8 +3106,6 @@ void ins_hint_set_hints(int startcol, list_T* list)
 	 li != NULL && i < hint_match_arraysize;
 	 li = li->li_next, ++i )
     {
-	// FIXME/TODO: Strings a freed when freeing hint_match_array in
-	// ins_hint_free
 
 	char_u* hint = get_tv_string( &li->li_tv );
 
@@ -3171,16 +3147,15 @@ void ins_hint_set_hints(int startcol, list_T* list)
 
 void ins_hint_clear()
 {
-    // TODO(Ben): Call this. See ins_compl_free? certainly look at call-sites of
-    // ins_compl_del_pum()
     if (hint_match_array != NULL)
     {
 	pum_undisplay(&hint_pum);
-	ins_hint_free( TRUE );
+	ins_hint_free(TRUE);
     }
     hint_match_startcol = -1;
     pum_clear(&hint_pum);
 }
+#endif
 
 /*
  * Update the screen and when there is any scrolling remove the popup menu.
@@ -7446,10 +7421,14 @@ stop_insert(
     can_si_back = FALSE;
 #endif
 
+#ifdef FEAT_INS_EXPAND
     // TODO(Ben): Is this the right place? Clear the hint pum when we leave
     // insert mode. There may be a more canonical way to do this. The standard
     // pum undisplays when leaving ctrl-x mode (which happens with ESC too).
+    // See ins_compl_free? certainly look at call-sites of
+    // ins_compl_del_pum()
     ins_hint_clear();
+#endif
 
     /* Set '[ and '] to the inserted text.  When end_insert_pos is NULL we are
      * now in a different buffer. */
