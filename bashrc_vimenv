@@ -1,0 +1,5 @@
+function vimenvinit {
+  export PATH=$HOME/Development/vim-env/bin:${PATH}
+  source $HOME/Development/vim-env/bin/activate
+}
+

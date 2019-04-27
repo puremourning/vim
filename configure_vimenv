@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+OPTS="--enable-python3interp \
+      --enable-rubyinterp=dynamic  \
+      --enable-tclinterp \
+      --enable-multibyte  \
+      --enable-cscope"
+
+BREW_PYTHON=1
+while [[ -n "$1" ]]; do
+  case "$1" in
+    "--debug")
+      export CFLAGS="${CFLAGS} -ggdb -O0"
+      ;;
+    "--no-brew-python")
+      BREW_PYTHON=0
+      ;;
+    "--debug-python")
+      export CFLAGS="${CFLAGS} -DPy_DEBUG -DPy_DEBUG_NO_PYMALLOC"
+      BREW_PYTHON=0
+      OPTS="--enable-python3interp"
+      ;;
+  esac
+  shift
+done
+
+if [[ $BREW_PYTHON == 1 ]]; then
+  echo "Using homebrew python"
+  export PATH=$(brew --prefix python)/bin:${PATH}
+fi
+
+make distclean
+./configure --prefix=/Users/ben/Development/vim-env \
+            --with-features=huge \
+            --enable-terminal \
+            ${OPTS} \
+            --enable-fail-if-missing \
+            "$@"
