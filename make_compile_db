@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+pushd $(dirname $0)
+  make clean
+  make -j 16 | tee make.out
+  python -m compiledb -p make.out -f -d $(pwd)/src --full-path
+  rm -f make.out
+popd
