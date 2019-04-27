@@ -1,0 +1,88 @@
+{
+   "configurations": {
+    "Run - clean": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        },
+        "expressions": "native"
+      }
+    },
+    "Run - with vimrc": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "${vimrc}" ],
+        "cwd": "${workspaceRoot}",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        },
+        "expressions": "native"
+      }
+    },
+    "Run - a test": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "-f",
+          "-u", "unix.vim",
+          "-U", "NONE",
+          "--noplugin",
+          "--not-a-term",
+          "-S", "runtest.vim",
+          "${Test}.vim"
+        ],
+        "cwd": "${workspaceRoot}/src/testdir",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        },
+        "expressions": "native"
+      }
+    },
+    "Run - dev": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "--cmd", "let g:benj_test_ycm=1"
+        ],
+        "cwd": "${workspaceRoot}",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        },
+        "expressions": "native"
+      }
+    },
+
+    "Attach: PID": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim",
+        "expressions": "native",
+        "stopOnEntry#json": "${StopOnEntry:true}",
+        "pid": "${pid}"
+      }
+    },
+
+    "Attach: Instance": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim",
+        "expressions": "native",
+        "stopOnEntry#json": "${StopOnEntry:true}",
+        "waitFor#json": "${WaitFor:false}"
+      }
+    }
+  }
+}
