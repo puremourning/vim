@@ -1,0 +1,162 @@
+{
+   "configurations": {
+    "Run - clean - lldb-mi": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - clean": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - clean - lldb-debug": {
+      "adapter": "lldb-vscode-debug",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - with vimrc": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "${vimrc}" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - a test": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "-f",
+          "-u", "unix.vim",
+          "-U", "NONE",
+          "--noplugin",
+          "--not-a-term",
+          "-S", "runtest.vim",
+          "${Test}.vim"
+        ],
+        "cwd": "${workspaceRoot}/src/testdir",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - dev ycmd": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "--cmd", "let g:benj_test_ycm=1",
+          "--cmd", "let g:ycm_use_clangd=1"
+        ],
+        "cwd": "${workspaceRoot}",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        }
+      }
+    },
+    "Attach": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim",
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Attach - lldb-vscode": {
+      "adapter": "lldb-vscode",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim"
+      }
+    },
+
+    "Vimscript Debug Nub": {
+      "adapter": "lldb-vscode",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "-S",
+          "/Users/ben/Development/vim-debug-adapter/runtime/nub.vim"
+        ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME",       "value": "${workspaceRoot}/runtime" },
+          { "name": "VIMTROSPECT_WAIT", "value": "1" }
+        ],
+        "externalConsole": true,
+        "MIMode": "lldb",
+        "stopAtEntry": true,
+        "stopOnntry": true,
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    }
+  }
+}
