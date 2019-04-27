@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+PYTHON="--enable-python3interp"
+
+OPTS="--enable-rubyinterp=dynamic  \
+      --enable-tclinterp \
+      --enable-multibyte  \
+      --enable-cscope"
+
+DEBUG_FLAGS="-g -gdwarf-4 -DDEBUG -O0 -fno-omit-frame-pointer"
+SAFETY_FLAGS='-DABORT_ON_INTERNAL_ERROR -DEXITFREE'
+LD=lld
+
+export CFLAGS="${CFLAGS} -isystem /usr/local/include"
+
+BREW_TCL=1
+BREW_PYTHON=1
+ENV_SUFFIX=""
+PYTHON_TYPE=""
+while [[ -n "$1" ]]; do
+  OPT=$1
+  shift
+  case "$OPT" in
+    "--help")
+      echo "Usage: $0 <options> -- <configure opts>"
+      echo ""
+      echo "Options:"
+      echo " --debug"
+      echo " --relwithdebinfo"
+      echo " --asan"
+      echo " --ubsan"
+      echo " --no-brew-python"
+      echo " --no-brew-tcl"
+      echo " --debug-python"
+      echo " --python2"
+      echo " --python3"
+      echo " --python2-python3"
+      echo " --python-type <auto/dynamic/static>"
+      echo " --no-python"
+      echo " --env3       - use vim-env3 (else use vim-env)"
+      echo ""
+      exit 0
+      ;;
+
+    "--env3")
+      ENV_SUFFIX=3
+      ;;
+    "--debug")
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
+      ;;
+    "--relwithdebinfo")
+      export CFLAGS="${CFLAGS} -g -O2 -march=native"
+      ;;
+    "--develop")
+      export CFLAGS="${CFLAGS} ${SAFETY_FLAGS}"
+      ;;
+    "--asan")
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} ${SAFETY_FLAGS} -fsanitize=address"
+      export LIBS="${DEBUG_FLAGS} ${SAFETY_FLAGS} -fsanitize=address"
+      ;;
+    "--ubsan")
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} -${SAFETY_FLAGS} -fsanitize=undefined"
+      export LIBS="${DEBUG_FLAGS} ${SAFETY_FLAGS} -fsanitize=undefined"
+      ;;
+    "--no-brew-python")
+      BREW_PYTHON=0
+      ;;
+    "--no-brew-python")
+      BREW_TCL=0
+      ;;
+    "--debug-python")
+      export CFLAGS="${CFLAGS} -DPy_DEBUG -DPy_DEBUG_NO_PYMALLOC"
+      BREW_PYTHON=0
+      OPTS="--enable-python3interp"
+      ;;
+    "--python2")
+      PYTHON="--enable-pythoninterp"
+      ;;
+    "--python3")
+      PYTHON="--enable-python3interp"
+      ;;
+    "--python2-python3")
+      PYTHON="--enable-pythoninterp --enable-python3interp"
+      ;;
+    "--python-type")
+      PYTHON_TYPE="=$1"
+      shift
+      ;;
+    "--no-python")
+      PYTHON=""
+      ;;
+    "--")
+      break
+      ;;
+    *)
+      echo "Unknown option $OPT"
+      exit 1
+      ;;
+  esac
+done
+
+echo "Additional args: "$@""
+
+if [[ $BREW_PYTHON == 1 ]]; then
+  echo "Using homebrew python"
+  export PATH=$(brew --prefix python)/bin:${PATH}
+fi
+
+if [[ $BREW_TCL -eq 1 ]]; then
+  echo "Using homebrew TCL"
+  export PATH=$(brew --prefix tcl-tk)/bin:${PATH}
+  OPTS="${OPTS} --with-tclsh=tclsh"
+fi
+
+make distclean
+./configure --prefix=/Users/ben/Development/vim-env${ENV_SUFFIX} \
+            --with-features=huge \
+            --enable-terminal \
+            ${PYTHON}${PYTHON_TYPE} \
+            ${OPTS} \
+            --enable-fail-if-missing \
+            "$@"
