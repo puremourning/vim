@@ -1,12 +1,12 @@
 {
   "configurations": {
-    "Vim - MS vscode-cpptools - run": {
+    "Vim - MS vscode-cpptools - run - clean": {
       "adapter": "vscode-cpptools",
       "configuration": {
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceRoot}/src/vim",
-        "args": [],
+        "args": [ "-Nu", "NONE" ],
         "cwd": "${workspaceRoot}",
         "environment": [],
         "externalConsole": true,

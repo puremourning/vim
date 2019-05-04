@@ -10,7 +10,7 @@ BREW_PYTHON=1
 while [[ -n "$1" ]]; do
   case "$1" in
     "--debug")
-      export CFLAGS="${CFLAGS} -ggdb -O0"
+      export CFLAGS="${CFLAGS} -g3 -O0"
       ;;
     "--no-brew-python")
       BREW_PYTHON=0
