@@ -8,7 +8,36 @@
         "program": "${workspaceRoot}/src/vim",
         "args": [ "-Nu", "NONE" ],
         "cwd": "${workspaceRoot}",
-        "environment": [],
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "stopAtEntry": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": false
+        }
+      }
+    },
+    "Vim - MS vscode-cpptools - run - a test": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "-f",
+          "-u", "unix.vim",
+          "-U", "NONE",
+          "--noplugin",
+          "--not-a-term",
+          "-S", "runtest.vim",
+          "${test}.vim"
+        ],
+        "cwd": "${workspaceRoot}/src/testdir",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
         "externalConsole": true,
         "stopAtEntry": true,
         "MIMode": "lldb",
@@ -25,7 +54,9 @@
         "program": "${workspaceRoot}/src/vim",
         "args": [ "--cmd", "let g:benj_test_ycm=1" ],
         "cwd": "${workspaceRoot}",
-        "environment": [],
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
         "externalConsole": true,
         "stopAtEntry": true,
         "MIMode": "lldb",

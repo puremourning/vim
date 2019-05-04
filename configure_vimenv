@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 
-OPTS="--enable-python3interp \
-      --enable-rubyinterp=dynamic  \
+PYTHON="--enable-python3interp"
+
+OPTS="--enable-rubyinterp=dynamic  \
       --enable-tclinterp \
       --enable-multibyte  \
       --enable-cscope"
+
+DEBUG_FLAGS="-g -gdwarf-4 -DDEBUG -O0 -fno-omit-frame-pointer"
+SANITIZER_FLAGS='-DABORT_ON_INTERNAL_ERROR -DEXITFREE'
+LD=lld
 
 BREW_PYTHON=1
 while [[ -n "$1" ]]; do
   case "$1" in
     "--debug")
-      export CFLAGS="${CFLAGS} -g3 -O0"
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
+      ;;
+    "--asan")
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} ${SANITIZER_FLAGS} -fsanitize=address"
+      export LIBS="${DEBUG_FLAGS} ${SANITIZER_FLAGS} -fsanitize=address"
+      ;;
+    "--ubsan")
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} -${SANITIZER_FLAGS} fsanitize=undefined"
+      export LIBS="${DEBUG_FLAGS} ${SANITIZER_FLAGS} -fsanitize=undefined"
       ;;
     "--no-brew-python")
       BREW_PYTHON=0
@@ -19,6 +32,18 @@ while [[ -n "$1" ]]; do
       export CFLAGS="${CFLAGS} -DPy_DEBUG -DPy_DEBUG_NO_PYMALLOC"
       BREW_PYTHON=0
       OPTS="--enable-python3interp"
+      ;;
+    "--python2")
+      PYTHON="--enable-pythoninterp"
+      ;;
+    "--python3")
+      PYTHON="--enable-python3interp"
+      ;;
+    "--python2-python3")
+      PYTHON="--enable-pythoninterp --enable-python3interp"
+      ;;
+    "--no-python")
+      PYTHON=""
       ;;
   esac
   shift
@@ -33,6 +58,7 @@ make distclean
 ./configure --prefix=/Users/ben/Development/vim-env \
             --with-features=huge \
             --enable-terminal \
+            ${PYTHON} \
             ${OPTS} \
             --enable-fail-if-missing \
             "$@"
