@@ -19,6 +19,25 @@
         }
       }
     },
+    "Vim - MS vscode-cpptools - run - with vimrc": {
+      "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "${vimrc}" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "stopAtEntry": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": false
+        }
+      }
+    },
     "Vim - MS vscode-cpptools - run - a test": {
       "adapter": "vscode-cpptools",
       "configuration": {
