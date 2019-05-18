@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+  CONTAINER="puremourning:vim-test-linux"
+else
+  CONTAINER=$1
+  shift
+fi
+
+echo "Using container $CONTAINER"
+
+CMD="bash"
+
+if [ "$@" ];then
+  CMD="$@"
+fi
+
+docker run --cap-add=SYS_PTRACE \
+           --security-opt seccomp=unconfined \
+           --mount src="$(pwd)/../..",target=/home/dev/vim,type=bind \
+           -it ${CONTAINER} \
+           $CMD
