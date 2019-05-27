@@ -13,7 +13,9 @@ LD=lld
 
 BREW_PYTHON=1
 while [[ -n "$1" ]]; do
-  case "$1" in
+  OPT=$1
+  shift
+  case "$OPT" in
     "--debug")
       export CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
       ;;
@@ -45,9 +47,17 @@ while [[ -n "$1" ]]; do
     "--no-python")
       PYTHON=""
       ;;
+    "--")
+      break
+      ;;
+    *)
+      echo "Unknown option $OPT"
+      exit 1
+      ;;
   esac
-  shift
 done
+
+echo "Additional args: "$@""
 
 if [[ $BREW_PYTHON == 1 ]]; then
   echo "Using homebrew python"
