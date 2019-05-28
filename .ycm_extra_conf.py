@@ -45,7 +45,8 @@ def GetMacro( m ):
                                'show_' + m ] ).strip()
    )
 
-def FlagsForFile(file_name, **kwargs):
+def Settings(**kwargs):
+    file_name = kwargs[ 'filename' ]
     base_name = os.path.basename(file_name)
     tu = (os.path.join(os.path.dirname(file_name), file_to_tu[base_name])
           if base_name in file_to_tu else file_name)
