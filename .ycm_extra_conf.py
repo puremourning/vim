@@ -7,7 +7,9 @@ from ycmd import utils
 # Map files to translation units.
 file_to_tu = {
   'nbdebug.c': 'netbeans.c',
-  'if_py_both.h': 'if_python3.c'
+  'if_py_both.h': 'if_python3.c',
+  'structs.h': 'main.c',
+  'vim.h': 'main.c',
 }
 
 # By default we just use ALL_CFLAGS, but some modules require specific flags.
