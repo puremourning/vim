@@ -32,3 +32,58 @@ func Test_feedkeys_TextChangedI()
   augroup END
   %bwipe!
 endfunc
+
+source check.vim
+
+func Test_feedkeys_dangerous()
+  CheckFeature timers
+
+  new
+
+  func TimerCallback( id ) closure
+    call assert_equal( 'i', mode() )
+    call feedkeys( "\<CR>And so is this\<ESC>" )
+  endfunc
+
+  call timer_start( 500, funcref( 'TimerCallback' ) )
+  call feedkeys( "iThis is a test", "tx!" )
+
+  call assert_equal( 'n', mode() )
+
+  call assert_equal( [ 'This is a test',  'And so is this' ],
+        \            getline( 1, 2 ) )
+
+  delfun TimerCallback
+  %bwipe!
+endfunc
+
+func Test_feedkeys_dangerous_recursive()
+  CheckFeature timers
+
+  new
+
+  func TimerCallback2( id ) closure
+    call assert_equal( 'i', mode() )
+    call feedkeys( "\<CR>A third test. Oh my!\<ESC>", "t" )
+  endfunc
+
+  func TimerCallback( id ) closure
+    call assert_equal( 'i', mode() )
+    call timer_start( 500, funcref( 'TimerCallback2' ) )
+    call feedkeys( "\<CR>And so is this", "t!" )
+  endfunc
+
+  call timer_start( 500, funcref( 'TimerCallback' ) )
+  call feedkeys( "iThis is a test", "tx!" )
+
+  call assert_equal( 'n', mode() )
+
+  call assert_equal( [ 'This is a test',
+        \               'And so is this',
+        \               'A third test. Oh my!' ],
+        \            getline( 1, 2 ) )
+
+  delfun TimerCallback
+  delfun TimerCallback2
+  %bwipe!
+endfunc
