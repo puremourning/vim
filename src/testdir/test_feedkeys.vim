@@ -69,8 +69,8 @@ func Test_feedkeys_dangerous_recursive()
 
   func TimerCallback( id ) closure
     call assert_equal( 'i', mode() )
-    call timer_start( 500, funcref( 'TimerCallback2' ) )
-    call feedkeys( "\<CR>And so is this", "t!" )
+    call timer_start( 0, funcref( 'TimerCallback2' ) )
+    call feedkeys( "\<CR>And so is this", "t" )
   endfunc
 
   call timer_start( 500, funcref( 'TimerCallback' ) )
@@ -81,7 +81,7 @@ func Test_feedkeys_dangerous_recursive()
   call assert_equal( [ 'This is a test',
         \               'And so is this',
         \               'A third test. Oh my!' ],
-        \            getline( 1, 2 ) )
+        \            getline( 1, 3 ) )
 
   delfun TimerCallback
   delfun TimerCallback2
