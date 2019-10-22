@@ -12,6 +12,7 @@ SANITIZER_FLAGS='-DABORT_ON_INTERNAL_ERROR -DEXITFREE'
 LD=lld
 
 BREW_PYTHON=1
+PYTHON_TYPE=""
 while [[ -n "$1" ]]; do
   OPT=$1
   shift
@@ -44,6 +45,10 @@ while [[ -n "$1" ]]; do
     "--python2-python3")
       PYTHON="--enable-pythoninterp --enable-python3interp"
       ;;
+    "--python-type")
+      PYTHON_TYPE="=$1"
+      shift
+      ;;
     "--no-python")
       PYTHON=""
       ;;
@@ -68,7 +73,7 @@ make distclean
 ./configure --prefix=/Users/ben/Development/vim-env \
             --with-features=huge \
             --enable-terminal \
-            ${PYTHON} \
+            ${PYTHON}${PYTHON_TYPE} \
             ${OPTS} \
             --enable-fail-if-missing \
             "$@"
