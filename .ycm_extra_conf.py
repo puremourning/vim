@@ -4,6 +4,11 @@ import subprocess
 import shlex
 from ycmd import utils
 
+try:
+  from ycmd.extra_conf_support import IgnoreExtraConf
+except ImportError:
+  IgnoreExtraConf = None
+
 # Map files to translation units.
 file_to_tu = {
   'nbdebug.c': 'netbeans.c',
@@ -48,24 +53,29 @@ def GetMacro( m ):
    )
 
 def Settings(**kwargs):
-    file_name = kwargs[ 'filename' ]
-    base_name = os.path.basename(file_name)
-    tu = (os.path.join(os.path.dirname(file_name), file_to_tu[base_name])
-          if base_name in file_to_tu else file_name)
+  if IgnoreExtraConf and os.path.exists( os.path.join(
+    os.path.dirname( os.path.abspath( __file__ ) ), 'compile_commands.json' ) ):
+    # Use the compilation database
+    raise IgnoreExtraConf()
 
-    _logger.info('Using tu %s for %s vs %s', tu, base_name, file_name)
+  file_name = kwargs[ 'filename' ]
+  base_name = os.path.basename(file_name)
+  tu = (os.path.join(os.path.dirname(file_name), file_to_tu[base_name])
+        if base_name in file_to_tu else file_name)
 
-    macros = tu_to_flags.get( os.path.basename( tu ), [ 'ALL_CFLAGS' ] )
-    _logger.info( "Using macros %s for %s",
-                  macros,
-                  os.path.basename( tu ) )
-    flags = []
-    for macro in macros:
-      flags.extend( shlex.split( GetMacro( macro ) ) )
+  _logger.info('Using tu %s for %s vs %s', tu, base_name, file_name)
+
+  macros = tu_to_flags.get( os.path.basename( tu ), [ 'ALL_CFLAGS' ] )
+  _logger.info( "Using macros %s for %s",
+                macros,
+                os.path.basename( tu ) )
+  flags = []
+  for macro in macros:
+    flags.extend( shlex.split( GetMacro( macro ) ) )
 
 
-    return {
-        'include_paths_relative_to_dir': os.path.dirname(tu),
-        'override_filename': tu,
-        'flags': flags
-    }
+  return {
+    'include_paths_relative_to_dir': os.path.dirname(tu),
+    'override_filename': tu,
+    'flags': flags
+  }
