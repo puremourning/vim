@@ -490,7 +490,7 @@ popup_notification({what}, {options})			 *popup_notification()*
 		This works like: >
 			call popup_create({what}, #{
 				\ line: 1,
-				\ col: 10,
+				\ col: 0,
 				\ minwidth: 20,
 				\ time: 3000,
 				\ tabpage: -1,
@@ -509,6 +509,10 @@ popup_notification({what}, {options})			 *popup_notification()*
 
 		The position will be adjusted to avoid overlap with other
 		notifications.
+
+		The default position is horizontally centered at the top of
+		the screen.
+
 		Use {options} to change the properties.
 
 		Can also be used as a |method|: >
