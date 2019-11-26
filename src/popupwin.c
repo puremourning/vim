@@ -1933,7 +1933,7 @@ popup_create(typval_T *argvars, typval_T *rettv, create_type_T type)
 	    wp->w_wantline = 1;
 	}
 
-	wp->w_wantcol = 10;
+	wp->w_wantcol = 0; // center horizontally
 	wp->w_zindex = POPUPWIN_NOTIFICATION_ZINDEX;
 	wp->w_minwidth = 20;
 	wp->w_popup_flags |= POPF_DRAG;
