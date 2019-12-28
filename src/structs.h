@@ -1477,6 +1477,7 @@ typedef struct
     garray_T	uf_args;	// arguments
     garray_T	uf_def_args;	// default argument expressions
     garray_T	uf_lines;	// function lines
+    // TODO garray_T uf_sourcelineinfo; // source/line info for each line
 # ifdef FEAT_PROFILE
     int		uf_profiling;	// TRUE when func is being profiled
     int		uf_prof_initialized;
