@@ -15,7 +15,7 @@
         "stopAtEntry": true,
         "MIMode": "lldb",
         "logging": {
-          "engineLogging": false
+          "engineLogging": true
         }
       }
     },
@@ -34,7 +34,7 @@
         "stopAtEntry": true,
         "MIMode": "lldb",
         "logging": {
-          "engineLogging": false
+          "engineLogging": true
         }
       }
     },
@@ -61,7 +61,7 @@
         "stopAtEntry": true,
         "MIMode": "gdb",
         "logging": {
-          "engineLogging": false
+          "engineLogging": true
         }
       }
     },
@@ -108,7 +108,7 @@
         "stopAtEntry": true,
         "MIMode": "lldb",
         "logging": {
-          "engineLogging": false
+          "engineLogging": true
         }
       }
     },
@@ -121,8 +121,21 @@
         "externalConsole": true,
         "MIMode": "lldb",
         "logging": {
-          "engineLogging": false
+          "engineLogging": true
         }
+      }
+    },
+    "Run - clean - lldb-vscode": {
+      "adapter": "lldb-vscode-debug",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ]
       }
     }
   }
