@@ -1,7 +1,27 @@
 {
-  "configurations": {
-    "Vim - MS vscode-cpptools - run - clean": {
+   "configurations": {
+    "Run - clean - lldb-mi (cpptools)": {
       "adapter": "vscode-cpptools",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "stopAtEntry": true,
+        "MIMode": "lldb",
+        "miDebuggerPath": "/Users/ben/Development/llvm-project/lldb-mi/build/src/lldb-mi",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - clean": {
+      "adapter": "lldb-vscode",
       "configuration": {
         "type": "cppdbg",
         "request": "launch",
@@ -19,8 +39,27 @@
         }
       }
     },
-    "Vim - MS vscode-cpptools - run - with vimrc": {
-      "adapter": "vscode-cpptools",
+    "Run - clean - lldb-debug": {
+      "adapter": "lldb-vscode-debug",
+      "configuration": {
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "-Nu", "NONE" ],
+        "cwd": "${workspaceRoot}",
+        "environment": [
+          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
+        ],
+        "externalConsole": true,
+        "stopAtEntry": true,
+        "MIMode": "lldb",
+        "logging": {
+          "engineLogging": true
+        }
+      }
+    },
+    "Run - with vimrc": {
+      "adapter": "lldb-vscode",
       "configuration": {
         "type": "cppdbg",
         "request": "launch",
@@ -38,8 +77,8 @@
         }
       }
     },
-    "Vim - MS vscode-cpptools - run - a test": {
-      "adapter": "vscode-cpptools",
+    "Run - a test": {
+      "adapter": "lldb-vscode",
       "configuration": {
         "type": "cppdbg",
         "request": "launch",
@@ -59,39 +98,14 @@
         ],
         "externalConsole": true,
         "stopAtEntry": true,
-        "MIMode": "gdb",
+        "MIMode": "lldb",
         "logging": {
           "engineLogging": true
         }
       }
     },
-    "Vim - MS lldb-vscode - run - a test": {
-      "adapter": {
-        "command": [ "/usr/local/Cellar/llvm/9.0.0/bin/lldb-vscode" ],
-        "type": "lldb-vscode"
-      },
-      "configuration": {
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceRoot}/src/vim",
-        "args": [
-          "-f",
-          "-u", "unix.vim",
-          "-U", "NONE",
-          "--noplugin",
-          "--not-a-term",
-          "-S", "runtest.vim",
-          "${Test}.vim"
-        ],
-        "cwd": "${workspaceRoot}/src/testdir",
-        "env": [
-          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
-        ],
-        "stopOnEntry": true
-      }
-    },
-    "Vim - MS vscode-cpptools - run - dev ycmd": {
-      "adapter": "vscode-cpptools",
+    "Run - dev ycmd": {
+      "adapter": "lldb-vscode",
       "configuration": {
         "type": "cppdbg",
         "request": "launch",
@@ -112,8 +126,8 @@
         }
       }
     },
-    "Vim - MS vscode-cpptools - attach": {
-      "adapter": "vscode-cpptools",
+    "Attach": {
+      "adapter": "lldb-vscode",
       "configuration": {
         "type": "cppdbg",
         "request": "attach",
@@ -123,19 +137,6 @@
         "logging": {
           "engineLogging": true
         }
-      }
-    },
-    "Run - clean - lldb-vscode": {
-      "adapter": "lldb-vscode-debug",
-      "configuration": {
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceRoot}/src/vim",
-        "args": [ "-Nu", "NONE" ],
-        "cwd": "${workspaceRoot}",
-        "environment": [
-          { "name": "VIMRUNTIME", "value": "${workspaceRoot}/runtime" }
-        ]
       }
     }
   }
