@@ -39,6 +39,36 @@ estack_init(void)
 }
 
 /*
+ * Returns the maximum stack (bascktrace) level
+ */
+    int
+estack_max_backtrace_level()
+{
+    // 0 is the top of the stack
+    // exestack.ga_len - 1 is the maximum backtrace level
+    return exestack.ga_len - 1;
+}
+
+/*
+ * Returns the estack entry at level supplied
+ */
+    estack_T*
+estack_get_level( int level )
+{
+    return ((estack_T *)exestack.ga_data) + level;
+}
+
+/*
+ * Returns the estack entry at backtrace level supplied
+ */
+    estack_T*
+estack_get_backtrace_level( int level )
+{
+    return ((estack_T *)exestack.ga_data)
+	+ (estack_max_backtrace_level() - level);
+}
+
+/*
  * Add an item to the execution stack.
  * Returns the new entry or NULL when out of memory.
  */
