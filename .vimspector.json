@@ -161,7 +161,7 @@
 
     "Vimscript test": {
       "adapter": {
-        "command": [ "node", "/Users/ben/Development/vim-debug-adapter/ts/dist/index.js" ]
+        "command": [ "node", "/Users/ben/Development/vim-debug-adapter/dist/index.js" ]
       },
       "configuration": {
         "type": "vim",
