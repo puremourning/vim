@@ -69,18 +69,42 @@ estack_push(etype_T type, char_u *name, long lnum)
  * Add a user function to the execution stack.
  */
     estack_T *
-estack_push_ufunc(ufunc_T *ufunc, long lnum)
+estack_push_ufunc(funccall_T *ufunc)
 {
     estack_T *entry = estack_push(ETYPE_UFUNC,
-	    ufunc->uf_name_exp != NULL
-				  ? ufunc->uf_name_exp : ufunc->uf_name, lnum);
+				  ufunc->func->uf_name_exp != NULL
+				    ? ufunc->func->uf_name_exp
+				    : ufunc->func->uf_name,
+				  ufunc->linenr);
     if (entry != NULL)
 	entry->es_info.ufunc = ufunc;
     return entry;
 }
 
+
+// TODO: Need to work out how to handle dfuncs. CUrrently the code for dfuncs is
+// basially the _old_ code for ufuncs and it's getting more and more pointless
+// and confusing. Probably the right thing to do is to put the cctx_t in the
+// estack
+    estack_T *
+estack_push_dfunc(ufunc_T *ufunc, long lnum)
+{
+    estack_T *entry = estack_push(ETYPE_DFUNC,
+				  ufunc->uf_name_exp != NULL
+				    ? ufunc->uf_name_exp
+				    : ufunc->uf_name,
+				  lnum);
+    if (entry != NULL)
+	entry->es_info.dfunc = ufunc;
+    return entry;
+}
+
 /*
  * Return TRUE if "ufunc" with "lnum" is already at the top of the exe stack.
+ *
+ * TODO(Ben): This is only used by vim9compile, presumably to make sure that
+ * errors messages look sane, so there's probably a better way, or that's just
+ * not compatible with using this stack as a debug call stack.
  */
     int
 estack_top_is_ufunc(ufunc_T *ufunc, long lnum)
@@ -90,11 +114,12 @@ estack_top_is_ufunc(ufunc_T *ufunc, long lnum)
     if (exestack.ga_len == 0)
 	return FALSE;
     entry = ((estack_T *)exestack.ga_data) + exestack.ga_len - 1;
-    return entry->es_type == ETYPE_UFUNC
+    return ( entry->es_type == ETYPE_UFUNC || entry->es_type == ETYPE_DFUNC )
 	&& STRCMP( entry->es_name, ufunc->uf_name_exp != NULL
 				    ? ufunc->uf_name_exp : ufunc->uf_name) == 0
 	&& entry->es_lnum == lnum;
 }
+
 #endif
 
 /*
@@ -1290,6 +1315,14 @@ do_source(
     save_funccal(&funccalp_entry);
 
     current_sctx.sc_lnum = 0;
+
+    // FIXME(BenJ): current_sctx is not a pointer, but what we put in the estack
+    // needs to actually be a pointer to the right value. Currently we're saving
+    // current_sctx in various method-locals which aren't really accessible.
+    //
+    // The way this works for funccal is to push pointer to to a stack of
+    // funccals in addition to the executtion stack. we need to do taht for
+    // sourcing script contexts too.
 
     // Check if this script was sourced before to finds its SID.
     // Always use a new sequence number.

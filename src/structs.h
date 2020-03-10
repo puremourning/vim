@@ -2020,6 +2020,7 @@ typedef enum {
     ETYPE_TOP,		    // toplevel
     ETYPE_SCRIPT,           // sourcing script, use es_info.sctx
     ETYPE_UFUNC,            // user function, use es_info.ufunc
+    ETYPE_DFUNC,            // user def function, use es_info.dfunc
     ETYPE_AUCMD,            // autocomand, use es_info.aucmd
     ETYPE_MODELINE,         // modeline, use es_info.sctx
     ETYPE_EXCEPT,           // exception, use es_info.exception
@@ -2036,7 +2037,8 @@ typedef struct {
     union {
 	sctx_T  *sctx;      // script and modeline info
 #if defined(FEAT_EVAL)
-	ufunc_T *ufunc;     // function info
+	funccall_T *ufunc;     // function call info
+	ufunc_T    *dfunc;     // function info without local vars
 #endif
 	AutoPatCmd *aucmd;  // autocommand info
 	except_T   *except; // exception info

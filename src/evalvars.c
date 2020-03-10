@@ -177,6 +177,7 @@ static char_u *ex_let_one(char_u *arg, typval_T *tv, int copy, int flags, char_u
 static int do_unlet_var(lval_T *lp, char_u *name_end, exarg_T *eap, int deep, void *cookie);
 static int do_lock_var(lval_T *lp, char_u *name_end, exarg_T *eap, int deep, void *cookie);
 static void list_one_var(dictitem_T *v, char *prefix, int *first);
+static void add_one_var(dictitem_T *v, char *prefix, list_T *list);
 static void list_one_var_a(char *prefix, char_u *name, int type, char_u *string, int *first);
 
 /*

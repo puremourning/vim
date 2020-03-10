@@ -1,7 +1,7 @@
 /* scriptfile.c */
 void estack_init(void);
-estack_T *estack_push(etype_T type, char_u *name, long lnum);
-estack_T *estack_push_ufunc(ufunc_T *ufunc, long lnum);
+estack_T *estack_push_ufunc(funccall_T *ufunc);
+estack_T *estack_push_dfunc(ufunc_T *ufunc, long lnum);
 int estack_top_is_ufunc(ufunc_T *ufunc, long lnum);
 estack_T *estack_pop(void);
 char_u *estack_sfile(estack_arg_T which);

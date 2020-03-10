@@ -326,7 +326,7 @@ call_dfunc(int cdf_idx, partial_T *pt, int argcount_arg, ectx_T *ectx)
     // Set execution state to the start of the called function.
     ectx->ec_dfunc_idx = cdf_idx;
     ectx->ec_instr = INSTRUCTIONS(dfunc);
-    entry = estack_push_ufunc(ufunc, 1);
+    entry = estack_push_dfunc(ufunc, 1);
     if (entry != NULL)
     {
 	// Set the script context to the script where the function was defined.
@@ -1370,7 +1370,7 @@ call_def_function(
 
     // Following errors are in the function, not the caller.
     // Commands behave like vim9script.
-    estack_push_ufunc(ufunc, 1);
+    estack_push_dfunc(ufunc, 1);
     current_sctx = ufunc->uf_script_ctx;
     current_sctx.sc_version = SCRIPT_VERSION_VIM9;
 

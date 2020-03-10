@@ -1837,7 +1837,7 @@ call_user_func(
 	++sandbox;
     }
 
-    estack_push_ufunc(fp, 1);
+    estack_push_ufunc(fc);
     ESTACK_CHECK_SETUP
     if (p_verbose >= 12)
     {

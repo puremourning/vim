@@ -91,28 +91,31 @@ do_debug(char_u *cmd)
     State = NORMAL;
     debug_mode = TRUE;
 
-    if (!debug_did_msg)
-	msg(_("Entering Debug mode.  Type \"cont\" to continue."));
-    if (debug_oldval != NULL)
+    if ( find_func( (char_u*)"DebugHook", TRUE, NULL ) != NULL )
     {
-	smsg(_("Oldval = \"%s\""), debug_oldval);
-	vim_free(debug_oldval);
-	debug_oldval = NULL;
+	if (!debug_did_msg)
+	    msg(_("Entering Debug mode.  Type \"cont\" to continue."));
+	if (debug_oldval != NULL)
+	{
+	    smsg(_("Oldval = \"%s\""), debug_oldval);
+	    vim_free(debug_oldval);
+	    debug_oldval = NULL;
+	}
+	if (debug_newval != NULL)
+	{
+	    smsg(_("Newval = \"%s\""), debug_newval);
+	    vim_free(debug_newval);
+	    debug_newval = NULL;
+	}
+	sname = estack_sfile(ESTACK_NONE);
+	if (sname != NULL)
+	    msg((char *)sname);
+	vim_free(sname);
+	if (SOURCING_LNUM != 0)
+	    smsg(_("line %ld: %s"), SOURCING_LNUM, cmd);
+	else
+	    smsg(_("cmd: %s"), cmd);
     }
-    if (debug_newval != NULL)
-    {
-	smsg(_("Newval = \"%s\""), debug_newval);
-	vim_free(debug_newval);
-	debug_newval = NULL;
-    }
-    sname = estack_sfile(ESTACK_NONE);
-    if (sname != NULL)
-	msg((char *)sname);
-    vim_free(sname);
-    if (SOURCING_LNUM != 0)
-	smsg(_("line %ld: %s"), SOURCING_LNUM, cmd);
-    else
-	smsg(_("cmd: %s"), cmd);
 
     // Repeat getting a command and executing it.
     for (;;)
@@ -136,7 +139,51 @@ do_debug(char_u *cmd)
 	}
 
 	vim_free(cmdline);
-	cmdline = getcmdline_prompt('>', NULL, 0, EXPAND_NOTHING, NULL);
+	// TODO(BenJ) i would like to delegate this action to a script function,
+	// eg. call_func_retstr, which for some reason returns void*, or
+	// call_vim_function, which is more general
+	//
+	// idea:
+	//  - add an option 'debugtracefunc', then here call it.
+	//  - its job is to return a command line to execute in vim debugger
+	//    language
+	//  - it can call debug_getstack(), and other things that would be
+	//    useful in order to dtermine the current stack.
+	//  - need a way for it to access the current sctx_T for locals, script
+	//    locals, etc.
+	//
+	// We can allow the user func to work by doing what's done at the end of
+	// this loop (debug_break_level = -1), then restore it.
+	//
+	// Obviously it would be bad if this function triggered another
+	// breakpoint, but maybe it would just work?
+	//
+	// Basically, i'm dead keen to write the debugger as a plugin, not in
+	// the vim codebase, because it's easier.
+	// don't debug this command
+	//
+	// Approach below seems to work.
+	//
+	// TODO(BenJ): Change to an option so it can be unset.
+	//
+	if ( find_func( (char_u*)"DebugHook", TRUE, NULL ) != NULL )
+	{
+	    typval_T argv[] = { {VAR_UNKNOWN} };
+
+	    n = debug_break_level;
+	    debug_break_level = -1;
+	    cmdline = call_func_retstr( (char_u*)"DebugHook", 0, argv );
+	    debug_break_level = n;
+
+	    if (!*cmdline)
+	    {
+		cmdline = getcmdline_prompt('>', NULL, 0, EXPAND_NOTHING, NULL);
+	    }
+	}
+	else
+	{
+	    cmdline = getcmdline_prompt('>', NULL, 0, EXPAND_NOTHING, NULL);
+	}
 
 	if (typeahead_saved)
 	{
@@ -359,6 +406,8 @@ do_checkbacktracelevel(void)
     static void
 do_showbacktrace(char_u *cmd)
 {
+    // TODO(BenJ): This is strying to write a backtrace based on the
+    // estack_sfile() output, but it would really just use the estack directly
     char_u  *sname;
     char    *cur;
     char    *next;

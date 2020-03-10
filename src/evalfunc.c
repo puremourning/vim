@@ -57,6 +57,8 @@ static void f_cos(typval_T *argvars, typval_T *rettv);
 static void f_cosh(typval_T *argvars, typval_T *rettv);
 #endif
 static void f_cursor(typval_T *argsvars, typval_T *rettv);
+static void f_debug_getstack(typval_T *argvars, typval_T *rettv);
+static void f_debug_getvariables(typval_T *argvars, typval_T *rettv);
 #ifdef MSWIN
 static void f_debugbreak(typval_T *argvars, typval_T *rettv);
 #endif
@@ -888,6 +890,10 @@ static funcentry_T global_functions[] =
 			ret_number,	    f_cscope_connection},
     {"cursor",		1, 3, FEARG_1,	    NULL,
 			ret_number,	    f_cursor},
+    {"debug_getstack",  0, 0, 0,	    NULL,
+			ret_list_dict_any,  f_debug_getstack},
+    {"debug_getvariables", 2, 2, 0,	    NULL,
+			ret_list_dict_any,  f_debug_getvariables},
     {"debugbreak",	1, 1, FEARG_1,	    NULL,
 			ret_number,
 #ifdef MSWIN
@@ -2836,6 +2842,264 @@ set_cursorpos(typval_T *argvars, typval_T *rettv, int charcol)
 f_cursor(typval_T *argvars, typval_T *rettv)
 {
     set_cursorpos(argvars, rettv, FALSE);
+}
+
+/*
+ * "debug_getstack()" function
+ */
+    static void
+f_debug_getstack(typval_T *argvars, typval_T *rettv)
+{
+    dict_T *frame = NULL;
+    estack_T *entry = NULL;
+    int idx;
+    scriptitem_T *si = NULL;
+
+    if (rettv_list_alloc(rettv) != OK)
+	return;
+
+    for( idx = estack_max_backtrace_level() - 1; idx >= 0; --idx )
+    {
+	entry = estack_get_level( idx );
+	if (entry->es_name == NULL)
+	    break;
+
+	if (entry->es_type == ETYPE_UFUNC)
+	{
+	    frame = dict_alloc();
+	    if (frame == NULL)
+		break;
+
+	    si = SCRIPT_ITEM(entry->es_info.ufunc->func->uf_script_ctx.sc_sid);
+
+	    dict_add_number(frame, "stack_level", idx);
+	    dict_add_string(frame, "type", (char_u*)"UFUNC" );
+	    dict_add_string(frame, "name", entry->es_name);
+	    dict_add_number(frame, "line", entry->es_lnum);
+	    dict_add_string(frame, "source_file", si->sn_name);
+	    dict_add_number(frame,
+			    "source_line",
+			    entry->es_info.ufunc->func->uf_script_ctx.sc_lnum +
+				 entry->es_lnum);
+	}
+	else if (entry->es_type == ETYPE_SCRIPT)
+	{
+	    frame = dict_alloc();
+	    if (frame == NULL)
+		break;
+
+	    dict_add_number(frame, "stack_level", idx);
+	    dict_add_string(frame, "type", (char_u*)"SCRIPT" );
+	    dict_add_string(frame, "name", entry->es_name);
+	    dict_add_number(frame, "line", entry->es_lnum);
+	    dict_add_string(frame, "source_file", entry->es_name);
+	    dict_add_number(frame, "source_line", entry->es_lnum);
+	}
+	else
+	{
+	    break;
+	}
+
+	list_append_dict( rettv->vval.v_list, frame );
+    }
+}
+
+    static void
+add_one_var(dictitem_T *v, char *prefix, list_T* list)
+{
+    static char_u* var_types[] = {
+	(char_u*)"VAR_UNKNOWN",
+	(char_u*)"VAR_VOID",
+	(char_u*)"VAR_BOOL",
+	(char_u*)"VAR_SPECIAL",
+	(char_u*)"VAR_NUMBER",
+	(char_u*)"VAR_FLOAT",
+	(char_u*)"VAR_STRING",
+	(char_u*)"VAR_BLOB",
+	(char_u*)"VAR_FUNC",
+	(char_u*)"VAR_PARTIAL",
+	(char_u*)"VAR_LIST",
+	(char_u*)"VAR_DICT",
+	(char_u*)"VAR_JOB",
+	(char_u*)"VAR_CHANNEL",
+    };
+
+    char_u	*tofree;
+    char_u	numbuf[NUMBUFLEN];
+    dict_T	*var = dict_alloc();
+
+    // TODO: This makes everything a stricng
+    char_u	*value = echo_string(&v->di_tv, &tofree, numbuf, get_copyID());
+    int n_len = STRLEN(prefix)
+	      + STRLEN(v->di_key != NULL
+	  	     ? v->di_key
+	  	     : (char_u*)"<unnamed>");
+
+    char_u	*name = alloc( n_len + 1 );
+    STRCPY( name, prefix );
+    STRCAT( name, v->di_key != NULL ? v->di_key : (char_u*)"<unnamed>" );
+    name[ n_len ] = NUL;
+
+    dict_add_string( var, "name", name );
+    dict_add_string( var, "value", value ); // Should return typed value?
+    dict_add_string( var, "type", var_types[v->di_tv.v_type] );
+    list_append_dict(list, var);
+
+    vim_free(name);
+    vim_free(tofree);
+}
+
+    static void
+add_hashtable_vars(
+    hashtab_T	*ht,
+    char	*prefix,
+    int		empty,
+    list_T	*list)
+{
+    hashitem_T	*hi;
+    dictitem_T	*di;
+    int		todo;
+
+    todo = (int)ht->ht_used;
+    for (hi = ht->ht_array; todo > 0 && !got_int; ++hi)
+    {
+	if (!HASHITEM_EMPTY(hi))
+	{
+	    --todo;
+	    di = HI2DI(hi);
+
+	    if (empty || di->di_tv.v_type != VAR_STRING
+					   || di->di_tv.vval.v_string != NULL)
+		add_one_var(di, prefix, list);
+	}
+    }
+}
+
+/*
+ * "debug_getvariables(stack_level,type) function
+ */
+    static void
+f_debug_getvariables(typval_T *argvars, typval_T *rettv)
+{
+    // list_arg_vars does what we want in evalvars.c
+    int stack_level = argvars[ 0 ].vval.v_number;
+    char_u* scope  = argvars[ 1 ].vval.v_string;
+    estack_T *entry = NULL;
+    scriptitem_T *si = NULL;
+
+    if (rettv_list_alloc(rettv) != OK)
+	return;
+
+    if (stack_level >= estack_max_backtrace_level() - 1 )
+    {
+	emsg("Invalid stack level");
+	return;
+    }
+    entry = estack_get_level(stack_level);
+
+    // FIXME: I just found get_funccal() in userfunc.c, which could mean we
+    // don't need to store funccals in the estack at all
+    //
+    // In fact, none of this is needed -  we just need to set
+    // debug_backtrace_level!! Neat.
+    //
+    // FIXME: Replace all the funccal stack with debug_backtrace_level.
+    //
+    // However - this still only runs through func calls, NOT scripts or other
+    // things on the estack, so perhaps we should be replacing get_funccal()
+    // with something a bit better and/or using out new stack_level concept
+    // instead, so that debug_backtrace_level actually representes the estack
+    // position, not the position in the funccal->caller->caller ... chain..
+    //
+    // This would involve baking in the sctx changes too. that seems more
+    // complete. I can see why the backtrace is only functions, because that
+    // means always one sctx - i would need to extend the backtracing to include
+    // current_sctx as well.
+
+    if ( (*scope == 'l' || *scope == 'a') && entry->es_type != ETYPE_UFUNC) {
+	emsg("No function scope for this stack frame");
+	return;
+    }
+
+    // FIXME: None of this will work with vim9script.
+
+    switch( *scope )
+    {
+    case 'l':
+	add_hashtable_vars( &entry->es_info.ufunc->l_vars.dv_hashtab,
+			    "l:",
+			    TRUE,
+			    rettv->vval.v_list );
+	// fall through
+    case 'a':
+	add_hashtable_vars( &entry->es_info.ufunc->l_avars.dv_hashtab,
+			    "a:",
+			    TRUE,
+			    rettv->vval.v_list );
+	break;
+    case 's':
+	if (entry->es_type == ETYPE_UFUNC)
+	{
+	    add_hashtable_vars(
+		&SCRIPT_VARS(entry->es_info.ufunc->func->uf_script_ctx.sc_sid),
+		"s:",
+		FALSE,
+		rettv->vval.v_list );
+	}
+	else
+	{
+	//    FIXME: I don't think that sctx is popupulated. I think we just
+	//    have the script name and line number.
+	//
+	//    add_hashtable_vars(
+	//	&SCRIPT_VARS(entry->es_info.sctx->sc_sid),
+	//	"s:",
+	//	FALSE,
+	//	rettv->vval.v_list );
+	}
+	break;
+    case 'g':
+	add_hashtable_vars( get_globvar_ht(),
+			    "g:",
+			    TRUE,
+			    rettv->vval.v_list );
+	break;
+    case 'b':
+	add_hashtable_vars( &curbuf->b_vars->dv_hashtab,
+			    "b:",
+			    TRUE,
+			    rettv->vval.v_list );
+	break;
+    case 'w':
+	add_hashtable_vars( &curwin->w_vars->dv_hashtab,
+			    "w:",
+			    TRUE,
+			    rettv->vval.v_list );
+	break;
+    case 't':
+	add_hashtable_vars( &curtab->tp_vars->dv_hashtab,
+			    "t:",
+			    TRUE,
+			    rettv->vval.v_list );
+	break;
+    case 'v':
+	add_hashtable_vars( &get_vimvar_dict()->dv_hashtab,
+			    "v:",
+			    TRUE,
+			    rettv->vval.v_list );
+	break;
+    default:
+	emsg( "Invalid syntax" );
+    }
+
+    //    // ":let"
+    //    list_glob_vars(&first);
+    //    list_buf_vars(&first);
+    //    list_win_vars(&first);
+    //    list_tab_vars(&first);
+    //    list_script_vars(&first);
+    //    list_func_vars(&first);
+    //    list_vim_vars(&first);
 }
 
 #ifdef MSWIN
