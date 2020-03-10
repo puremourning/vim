@@ -157,6 +157,17 @@
           "engineLogging": true
         }
       }
+    },
+
+    "Vimscript test": {
+      "adapter": {
+        "command": [ "node", "/Users/ben/Development/vim-debug-adapter/ts/dist/index.js" ]
+      },
+      "configuration": {
+        "type": "vim",
+        "request": "launch",
+        "vim": "${workspaceRoot}/src/vim"
+      }
     }
   }
 }
