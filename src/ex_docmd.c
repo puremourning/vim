@@ -1413,6 +1413,7 @@ handle_did_throw()
 	    break;
     }
 
+    // TODO: we don't know the scid for the throwpoint
     estack_push(ETYPE_EXCEPT, current_exception->throw_name,
 					current_exception->throw_lnum);
     ESTACK_CHECK_SETUP

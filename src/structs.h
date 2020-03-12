@@ -1022,6 +1022,8 @@ struct vim_exception
     char		*value;		// exception value
     struct msglist	*messages;	// message(s) causing error exception
     char_u		*throw_name;	// name of the throw point
+					// TODO: Store the scid as well so that
+					// we can push it into the estack
     linenr_T		throw_lnum;	// line number of the throw point
     except_T		*caught;	// next exception on the caught stack
 };
@@ -2101,7 +2103,7 @@ typedef struct {
     char_u    *es_name;     // replaces "sourcing_name"
     etype_T   es_type;
     union {
-	sctx_T  *sctx;      // script and modeline info
+	scid_T	    scid;   // script and modeline info.
 #if defined(FEAT_EVAL)
 	funccall_T *ufunc;     // function call info
 	ufunc_T    *dfunc;     // function info without local vars
