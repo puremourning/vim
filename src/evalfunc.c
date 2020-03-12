@@ -2888,6 +2888,9 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	    if (frame == NULL)
 		break;
 
+	    // scriptitem_T* item = SCRIPT_ITEM(entry->es_info.scid);
+	    // We don't currently need the scriptitem_T here;
+
 	    dict_add_number(frame, "stack_level", idx);
 	    dict_add_string(frame, "type", (char_u*)"SCRIPT" );
 	    dict_add_string(frame, "name", entry->es_name);
@@ -2895,9 +2898,30 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	    dict_add_string(frame, "source_file", entry->es_name);
 	    dict_add_number(frame, "source_line", entry->es_lnum);
 	}
+	else if (entry->es_type = ETYPE_TOP)
+	{
+	    // We're done.
+	    break;
+	}
+	else if (entry->es_type == ETYPE_ENV ||
+		 entry->es_type == ETYPE_ARGS ||
+		 entry->es_type == ETYPE_INTERNAL)
+	{
+	    // this stack frame isn't interesting or useful to the user
+	    continue;
+	}
+	else if (entry->es_type == ETYPE_AUCMD ||
+		 entry->es_type == ETYPE_SPELL ||
+		 entry->es_type == ETYPE_EXCEPT ||
+		 entry->es_type == ETYPE_DFUNC ||
+		 entry->es_type == ETYPE_MODELINE)
+	{
+	    // Not yet implemented
+	    continue;
+	}
 	else
 	{
-	    break;
+	    emsg( "Internal Error: Unknown stack entry type" );
 	}
 
 	list_append_dict( rettv->vval.v_list, frame );
@@ -3046,16 +3070,16 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
 		FALSE,
 		rettv->vval.v_list );
 	}
+	else if (entry->es_type == ETYPE_SCRIPT)
+	{
+	    add_hashtable_vars( &SCRIPT_VARS(entry->es_info.scid),
+				"s:",
+				FALSE,
+				rettv->vval.v_list );
+	}
 	else
 	{
-	//    FIXME: I don't think that sctx is popupulated. I think we just
-	//    have the script name and line number.
-	//
-	//    add_hashtable_vars(
-	//	&SCRIPT_VARS(entry->es_info.sctx->sc_sid),
-	//	"s:",
-	//	FALSE,
-	//	rettv->vval.v_list );
+	    // no script vars (yet?)
 	}
 	break;
     case 'g':
@@ -3091,15 +3115,6 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
     default:
 	emsg( "Invalid syntax" );
     }
-
-    //    // ":let"
-    //    list_glob_vars(&first);
-    //    list_buf_vars(&first);
-    //    list_win_vars(&first);
-    //    list_tab_vars(&first);
-    //    list_script_vars(&first);
-    //    list_func_vars(&first);
-    //    list_vim_vars(&first);
 }
 
 #ifdef MSWIN

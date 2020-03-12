@@ -94,6 +94,28 @@ estack_push(etype_T type, char_u *name, long lnum)
     return NULL;
 }
 
+    estack_T *
+estack_push_script(etype_T type, scid_T scid, long lnum )
+{
+    scriptitem_T *sitem = SCRIPT_ITEM(scid);
+    estack_T *entry = estack_push(type, sitem->sn_name, lnum);
+    if (entry != NULL)
+	entry->es_info.scid = scid;
+    return entry;
+}
+
+    estack_T *
+estack_push_special(etype_T type,
+		    scid_T scid,
+		    char_u *sourcing_name,
+		    long lnum )
+{
+    estack_T *entry = estack_push(type, sourcing_name, lnum);
+    if (entry != NULL)
+	entry->es_info.scid = scid;
+    return entry;
+}
+
 #if defined(FEAT_EVAL) || defined(PROTO)
 /*
  * Add a user function to the execution stack.
@@ -1322,10 +1344,6 @@ do_source(
     cookie.level = ex_nesting_level;
 #endif
 
-    // Keep the sourcing name/lnum, for recursive calls.
-    estack_push(ETYPE_SCRIPT, fname_exp, 0);
-    ESTACK_CHECK_SETUP
-
 #ifdef STARTUPTIME
     if (time_fd != NULL)
 	time_push(&tv_rel, &tv_start);
@@ -1422,6 +1440,11 @@ do_source(
 	// Used to check script variable index is still valid.
 	si->sn_script_seq = current_sctx.sc_seq;
     }
+
+    // Keep the sourcing name/lnum, for recursive calls.
+    estack_push_script(ETYPE_SCRIPT, current_sctx.sc_sid, 0);
+    ESTACK_CHECK_SETUP
+
 
 # ifdef FEAT_PROFILE
     if (do_profiling == PROF_YES)
