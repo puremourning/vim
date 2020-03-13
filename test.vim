@@ -1,5 +1,3 @@
-breakadd file 14 test.vim
-
 function! s:Test()
   let test = 'this is a test'
   let l:another_test = #{ key: 'value', test: 'testing' }
@@ -19,3 +17,5 @@ let s:foooooooo = 'fuuuuuu'
 let g:f = 'f' .. s:foooooooo
 
 call Test2( g:f )
+
+autocmd User TestAutoCommand call s:Test()
