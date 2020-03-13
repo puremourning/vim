@@ -204,7 +204,9 @@ estack_sfile(estack_arg_T which UNUSED)
 
     entry = ((estack_T *)exestack.ga_data) + exestack.ga_len - 1;
 #ifdef FEAT_EVAL
-    if (which == ESTACK_SFILE && entry->es_type != ETYPE_UFUNC)
+    if (which == ESTACK_SFILE &&
+	entry->es_type != ETYPE_UFUNC &&
+	entry->es_type != ETYPE_DFUNC)
 #endif
     {
 	if (entry->es_name == NULL)
@@ -231,7 +233,8 @@ estack_sfile(estack_arg_T which UNUSED)
 		switch (entry->es_type)
 		{
 		    case ETYPE_SCRIPT: type_name = "script "; break;
-		    case ETYPE_UFUNC: type_name = "function "; break;
+		    case ETYPE_UFUNC:
+		    case ETYPE_DFUNC: type_name = "function "; break;
 		    default: type_name = ""; break;
 		}
 		last_type = entry->es_type;
