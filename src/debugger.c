@@ -724,7 +724,7 @@ ex_breakadd(exarg_T *eap)
 	    else
 	    {
 		if (bp->dbg_lnum == 0)	// default line number is 1
-		    bp->dbg_lnum = 1;
+		    bp->dbg_lnum = 1; // TODO: elsewhere we check for 0
 #ifdef FEAT_PROFILE
 		if (eap->cmdidx != CMD_profile)
 #endif
@@ -809,7 +809,7 @@ ex_breakdel(exarg_T *eap)
 	    if (bp->dbg_type == bpi->dbg_type
 		    && STRCMP(bp->dbg_name, bpi->dbg_name) == 0
 		    && (bp->dbg_lnum == bpi->dbg_lnum
-			|| (bp->dbg_lnum == 0
+			|| (bp->dbg_lnum == 0 // TODO: can it be?
 			    && (best_lnum == 0
 				|| bpi->dbg_lnum < best_lnum))))
 	    {
