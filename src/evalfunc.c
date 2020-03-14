@@ -3745,7 +3745,7 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
 	emsg("Invalid stack level");
 	return;
     }
-    entry = estack_get_level(stack_level);
+    entry = estack_get_level(stack_level); // TODO: Inline
 
     // FIXME: I just found get_funccal() in userfunc.c, which could mean we
     // don't need to store funccals in the estack at all
@@ -3765,6 +3765,8 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
     // complete. I can see why the backtrace is only functions, because that
     // means always one sctx - i would need to extend the backtracing to include
     // current_sctx as well.
+    //
+    // Now that the estack contains scid_T, we can do this.
 
     if ( (*scope == 'l' || *scope == 'a') && entry->es_type != ETYPE_UFUNC) {
 	emsg("No function scope for this stack frame");
