@@ -2898,7 +2898,7 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	    dict_add_string(frame, "source_file", entry->es_name);
 	    dict_add_number(frame, "source_line", entry->es_lnum);
 	}
-	else if (entry->es_type = ETYPE_TOP)
+	else if (entry->es_type == ETYPE_TOP)
 	{
 	    // We're done.
 	    break;
