@@ -2850,37 +2850,45 @@ f_cursor(typval_T *argvars, typval_T *rettv)
     static void
 f_debug_getstack(typval_T *argvars, typval_T *rettv)
 {
-    dict_T *frame = NULL;
-    estack_T *entry = NULL;
-    int idx;
-    scriptitem_T *si = NULL;
-
     if (rettv_list_alloc(rettv) != OK)
 	return;
 
-    for( idx = estack_max_backtrace_level() - 1; idx >= 0; --idx )
+    for( int idx = estack_max_backtrace_level() - 1; idx >= 0; --idx )
     {
-	entry = estack_get_level( idx );
+	estack_T *entry = estack_get_level( idx );
+	dict_T *frame = NULL;
+
 	if (entry->es_name == NULL)
 	    break;
 
 	if (entry->es_type == ETYPE_UFUNC)
 	{
+	    sctx_T sctx = entry->es_info.ufunc->func->uf_script_ctx;
+
 	    frame = dict_alloc();
 	    if (frame == NULL)
 		break;
 
-	    si = SCRIPT_ITEM(entry->es_info.ufunc->func->uf_script_ctx.sc_sid);
 
 	    dict_add_number(frame, "stack_level", idx);
 	    dict_add_string(frame, "type", (char_u*)"UFUNC" );
 	    dict_add_string(frame, "name", entry->es_name);
 	    dict_add_number(frame, "line", entry->es_lnum);
-	    dict_add_string(frame, "source_file", si->sn_name);
-	    dict_add_number(frame,
-			    "source_line",
-			    entry->es_info.ufunc->func->uf_script_ctx.sc_lnum +
-				 entry->es_lnum);
+	    if ( sctx.sc_sid )
+	    {
+		scriptitem_T *si = si = SCRIPT_ITEM( sctx.sc_sid );
+		dict_add_string(frame, "source_file", si->sn_name);
+		dict_add_number(
+		    frame,
+		    "source_line",
+		    entry->es_info.ufunc->func->uf_script_ctx.sc_lnum +
+			entry->es_lnum);
+	    }
+	}
+	else if (entry->es_type == ETYPE_DFUNC)
+	{
+	    // Not yet implemented
+	    continue;
 	}
 	else if (entry->es_type == ETYPE_SCRIPT)
 	{
@@ -2888,19 +2896,17 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	    if (frame == NULL)
 		break;
 
-	    // scriptitem_T* item = SCRIPT_ITEM(entry->es_info.scid);
-	    // We don't currently need the scriptitem_T here;
-
 	    dict_add_number(frame, "stack_level", idx);
 	    dict_add_string(frame, "type", (char_u*)"SCRIPT" );
-	    dict_add_string(frame, "name", entry->es_name);
+	    dict_add_string(frame, "name", (char_u*)"source" );
 	    dict_add_number(frame, "line", entry->es_lnum);
 	    dict_add_string(frame, "source_file", entry->es_name);
 	    dict_add_number(frame, "source_line", entry->es_lnum);
 	}
 	else if (entry->es_type == ETYPE_TOP)
 	{
-	    // We're done.
+	    // We're done; TBH this should always be botton of stack.
+	    assert( idx == 0 );
 	    break;
 	}
 	else if (entry->es_type == ETYPE_ENV ||
@@ -2910,19 +2916,40 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	    // this stack frame isn't interesting or useful to the user
 	    continue;
 	}
-	else if (entry->es_type == ETYPE_AUCMD ||
-		 entry->es_type == ETYPE_SPELL ||
-		 entry->es_type == ETYPE_EXCEPT ||
-		 entry->es_type == ETYPE_DFUNC ||
-		 entry->es_type == ETYPE_MODELINE)
+	else if (entry->es_type == ETYPE_AUCMD)
 	{
-	    // Not yet implemented
+	    AutoCmd *cmd = entry->es_info.aucmd;
+	    sctx_T sctx = cmd->script_ctx;
+
+	    frame = dict_alloc();
+	    if (frame == NULL)
+		break;
+
+	    dict_add_number(frame, "stack_level", idx);
+	    dict_add_string(frame, "type", (char_u*)"AUCMD" );
+	    dict_add_string(frame, "name", entry->es_name);
+	    dict_add_number(frame, "line", entry->es_lnum);
+	    if ( sctx.sc_sid )
+	    {
+		scriptitem_T* script = SCRIPT_ITEM( cmd->script_ctx.sc_sid );
+		dict_add_string(frame, "source_file", script->sn_name );
+		dict_add_number(frame, "source_line", sctx.sc_lnum );
+	    }
+	}
+	else if(entry->es_type == ETYPE_SPELL ||
+		entry->es_type == ETYPE_EXCEPT ||
+		entry->es_type == ETYPE_MODELINE)
+	{
+	    // Not yet implemented; note this will leave a gap in the ids but
+	    // that's ok
 	    continue;
 	}
 	else
 	{
 	    emsg( "Internal Error: Unknown stack entry type" );
 	}
+
+	assert( frame );
 
 	list_append_dict( rettv->vval.v_list, frame );
     }

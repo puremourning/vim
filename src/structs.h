@@ -2013,7 +2013,90 @@ struct partial_S
     int		pt_copyID;	// funcstack may contain pointer to partial
 };
 
+typedef struct AutoPat AutoPat;
+typedef struct AutoCmd AutoCmd;
 typedef struct AutoPatCmd_S AutoPatCmd;
+
+/*
+ * The autocommands are stored in a list for each event.
+ * Autocommands for the same pattern, that are consecutive, are joined
+ * together, to avoid having to match the pattern too often.
+ * The result is an array of Autopat lists, which point to AutoCmd lists:
+ *
+ * last_autopat[0]  -----------------------------+
+ *						 V
+ * first_autopat[0] --> Autopat.next  -->  Autopat.next -->  NULL
+ *			Autopat.cmds	   Autopat.cmds
+ *			    |			 |
+ *			    V			 V
+ *			AutoCmd.next	   AutoCmd.next
+ *			    |			 |
+ *			    V			 V
+ *			AutoCmd.next		NULL
+ *			    |
+ *			    V
+ *			   NULL
+ *
+ * last_autopat[1]  --------+
+ *			    V
+ * first_autopat[1] --> Autopat.next  -->  NULL
+ *			Autopat.cmds
+ *			    |
+ *			    V
+ *			AutoCmd.next
+ *			    |
+ *			    V
+ *			   NULL
+ *   etc.
+ *
+ *   The order of AutoCmds is important, this is the order in which they were
+ *   defined and will have to be executed.
+ */
+struct AutoCmd
+{
+    char_u	    *cmd;		// The command to be executed (NULL
+					// when command has been removed).
+    char	    once;		// "One shot": removed after execution
+    char	    nested;		// If autocommands nest here.
+    char	    last;		// last command in list
+#ifdef FEAT_EVAL
+    sctx_T	    script_ctx;		// script context where defined
+#endif
+    struct AutoCmd  *next;		// next AutoCmd in list
+};
+
+struct AutoPat
+{
+    struct AutoPat  *next;		// Next AutoPat in AutoPat list; MUST
+					// be the first entry.
+    char_u	    *pat;		// pattern as typed (NULL when pattern
+					// has been removed)
+    regprog_T	    *reg_prog;		// compiled regprog for pattern
+    AutoCmd	    *cmds;		// list of commands to do
+    int		    group;		// group ID
+    int		    patlen;		// strlen() of pat
+    int		    buflocal_nr;	// !=0 for buffer-local AutoPat
+    char	    allow_dirs;		// Pattern may match whole path
+    char	    last;		// last pattern for apply_autocmds()
+};
+
+/*
+ * struct used to keep status while executing autocommands for an event.
+ */
+struct AutoPatCmd_S
+{
+    AutoPat	*curpat;	// next AutoPat to examine
+    AutoCmd	*nextcmd;	// next AutoCmd to execute
+    int		group;		// group being used
+    char_u	*fname;		// fname to match with
+    char_u	*sfname;	// sfname to match with
+    char_u	*tail;		// tail of fname
+    event_T	event;		// current event
+    int		arg_bufnr;	// Initially equal to <abuf>, set to zero when
+				// buf is deleted.
+    AutoPatCmd   *next;		// chain of active apc-s for auto-invalidation
+};
+
 
 /*
  * Entry in the execution stack "exestack".
@@ -2042,7 +2125,7 @@ typedef struct {
 	funccall_T *ufunc;     // function call info
 	ufunc_T    *dfunc;     // function info without local vars
 #endif
-	AutoPatCmd *aucmd;  // autocommand info
+	AutoCmd    *aucmd;  // autocommand info
 	except_T   *except; // exception info
     } es_info;
 #if defined(FEAT_EVAL)
