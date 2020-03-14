@@ -27,6 +27,8 @@ static int     debug_expr   = 0;        // use debug_expr
     int
 has_watchexpr(void)
 {
+    // TODO/FIXME(Benj): It would appear that this will always return 0, as
+    // debug_expr is never assigned anything other than 0
     return debug_expr;
 }
 
