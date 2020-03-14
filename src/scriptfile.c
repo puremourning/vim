@@ -145,6 +145,8 @@ estack_push_ufunc(funccall_T *ufunc)
 // basially the _old_ code for ufuncs and it's getting more and more pointless
 // and confusing. Probably the right thing to do is to put the cctx_t in the
 // estack
+//
+// TODO: take a dfunc_T* ?
     estack_T *
 estack_push_dfunc(ufunc_T *ufunc, long lnum)
 {

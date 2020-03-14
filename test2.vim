@@ -7,4 +7,13 @@ function! Test3()
         echom a
 endf
 
-call Test3()
+function! s:Recover( v ) abort
+  echom "Recover " a:v
+endfunction
+
+try
+  call Test3()
+catch /.*/
+  echom "Exception was caught" v:exception
+  call s:Recover( s:script_var )
+endtry
