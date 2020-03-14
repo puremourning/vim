@@ -91,7 +91,7 @@ do_debug(char_u *cmd)
     State = MODE_NORMAL;
     debug_mode = TRUE;
 
-    if ( !find_func( (char_u*)"DebugHook", TRUE, NULL ) )
+    if ( !find_func( (char_u*)"DebugHook", TRUE ) )
     {
 	if (!debug_did_msg)
 	    msg(_("Entering Debug mode.  Type \"cont\" to continue."));
@@ -166,7 +166,7 @@ do_debug(char_u *cmd)
 	//
 	// TODO(BenJ): Change to an option so it can be unset.
 	//
-	if ( find_func( (char_u*)"DebugHook", TRUE, NULL ) )
+	if ( find_func( (char_u*)"DebugHook", TRUE ) )
 	{
 	    typval_T argv[] = { {VAR_UNKNOWN} };
 
