@@ -839,9 +839,17 @@ do_cmdline(
 	    if (breakpoint != NULL && dbg_tick != NULL
 						   && *dbg_tick != debug_tick)
 	    {
-		*breakpoint = dbg_find_breakpoint(
-				getline_equal(fgetline, cookie, getsourceline),
-							fname, SOURCING_LNUM);
+		if (getline_equal(fgetline, cookie, getsourceline))
+		{
+		    *breakpoint = dbg_find_breakpoint( TRUE,
+						       fname,
+						       SOURCING_LNUM);
+		}
+		else
+		{
+		    *breakpoint = dbg_find_breakpoint_in_func( cookie,
+							       SOURCING_LNUM );
+		}
 		*dbg_tick = debug_tick;
 	    }
 
@@ -854,9 +862,17 @@ do_cmdline(
 	    {
 		dbg_breakpoint(fname, SOURCING_LNUM);
 		// Find next breakpoint.
-		*breakpoint = dbg_find_breakpoint(
-			       getline_equal(fgetline, cookie, getsourceline),
-							fname, SOURCING_LNUM);
+		if (getline_equal(fgetline, cookie, getsourceline))
+		{
+		    *breakpoint = dbg_find_breakpoint( TRUE,
+						       fname,
+						       SOURCING_LNUM);
+		}
+		else
+		{
+		    *breakpoint = dbg_find_breakpoint_in_func( cookie,
+							       SOURCING_LNUM );
+		}
 		*dbg_tick = debug_tick;
 	    }
 # ifdef FEAT_PROFILE
@@ -1080,10 +1096,19 @@ do_cmdline(
 		    // or ":for".
 		    if (breakpoint != NULL)
 		    {
-			*breakpoint = dbg_find_breakpoint(
-			       getline_equal(fgetline, cookie, getsourceline),
-									fname,
-			   ((wcmd_T *)lines_ga.ga_data)[current_line].lnum-1);
+			linenr_T after = 
+			   ((wcmd_T *)lines_ga.ga_data)[current_line].lnum-1;
+			if (getline_equal(fgetline, cookie, getsourceline))
+			{
+			    *breakpoint = dbg_find_breakpoint( TRUE,
+							       fname,
+							       after );
+			}
+			else
+			{
+			    *breakpoint = dbg_find_breakpoint_in_func( cookie,
+								       after  );
+			}
 			*dbg_tick = debug_tick;
 		    }
 		}
@@ -1109,7 +1134,7 @@ do_cmdline(
 	// Check for the next breakpoint after a watchexpression
 	if (breakpoint != NULL && has_watchexpr())
 	{
-	    *breakpoint = dbg_find_breakpoint(FALSE, fname, SOURCING_LNUM);
+	    *breakpoint = dbg_find_breakpoint_in_func(cookie, SOURCING_LNUM);
 	    *dbg_tick = debug_tick;
 	}
 

@@ -1650,7 +1650,10 @@ call_user_func(
     fc->rettv = rettv;
     fc->level = ex_nesting_level;
     // Check if this function has a breakpoint.
-    fc->breakpoint = dbg_find_breakpoint(FALSE, fp->uf_name, (linenr_T)0);
+    // TODO(BenJ): Dangerous passing fc here, we should change
+    // dbg_find_breakpoint_in_func to use a ufunc_T not a funccall_T, as it only
+    // actually requires that. Actually, that's not the problem - it's that the // uf_lines.ga_len isn't init'd yet ?
+    fc->breakpoint = dbg_find_breakpoint_in_func(fc, (linenr_T)0);
     fc->dbg_tick = debug_tick;
     // Set up fields for closure.
     ga_init2(&fc->fc_funcs, sizeof(ufunc_T *), 1);
@@ -4698,8 +4701,7 @@ get_func_line(
     // If breakpoints have been added/deleted need to check for it.
     if (fcp->dbg_tick != debug_tick)
     {
-	fcp->breakpoint = dbg_find_breakpoint(FALSE, fp->uf_name,
-							       SOURCING_LNUM);
+	fcp->breakpoint = dbg_find_breakpoint_in_func(fcp, SOURCING_LNUM);
 	fcp->dbg_tick = debug_tick;
     }
 #ifdef FEAT_PROFILE
@@ -4735,8 +4737,7 @@ get_func_line(
     {
 	dbg_breakpoint(fp->uf_name, SOURCING_LNUM);
 	// Find next breakpoint.
-	fcp->breakpoint = dbg_find_breakpoint(FALSE, fp->uf_name,
-							       SOURCING_LNUM);
+	fcp->breakpoint = dbg_find_breakpoint_in_func(fcp, SOURCING_LNUM);
 	fcp->dbg_tick = debug_tick;
     }
 

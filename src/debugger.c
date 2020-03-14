@@ -881,6 +881,79 @@ ex_breaklist(exarg_T *eap UNUSED)
 }
 
 /*
+ * Find a breakpoint for a function.
+ * Returns the line number within the function at which to break or 0 if there
+ * is no appropriate breakpoint.
+ */
+    linenr_T
+dbg_find_breakpoint_in_func(
+    funccall_T* func_call,
+    linenr_T    after )
+{
+    linenr_T func_breakpoint = dbg_find_breakpoint( FALSE,
+						    func_name( func_call ),
+						    after );
+    scriptitem_T *script =
+	SCRIPT_ITEM( func_call->func->uf_script_ctx.sc_sid );
+
+    // TODO(BenJ): can you define a funciton outside of a script context ?!
+    assert( script );
+
+    int func_start = func_call->func->uf_script_ctx.sc_lnum;
+    int func_end = func_call->func->uf_script_ctx.sc_lnum +
+	func_call->func->uf_lines.ga_len;
+
+
+    linenr_T file_breakpoint = dbg_find_breakpoint( TRUE,
+						    script->sn_name,
+						    func_start + after );
+    linenr_T breakpoint = 0;
+
+    if (file_breakpoint > 0)
+    {
+	// we need to return an offset into function's lines, so calculate that
+	// based on where the function is defined
+
+	assert( file_breakpoint > func_start );
+	file_breakpoint -= func_start;
+
+	assert( file_breakpoint > after );
+
+	// we might have found a breakpoint outside of the function, so
+	// don't overflow the function's lines -
+	if (file_breakpoint < 0 ||
+	    file_breakpoint >= func_call->func->uf_lines.ga_len)
+	{
+	    file_breakpoint = 0;
+	}
+    }
+
+    if ( func_breakpoint > 0 && file_breakpoint > 0 )
+    {
+	// Pick the smallest
+	breakpoint = ( func_breakpoint < file_breakpoint )
+		   ? func_breakpoint
+		   : file_breakpoint;
+
+    }
+    else if ( file_breakpoint > 0 )
+    {
+	breakpoint = file_breakpoint;
+    }
+    else
+    {
+	breakpoint = func_breakpoint;
+    }
+
+
+    assert( breakpoint == 0 || breakpoint > after );
+    assert( breakpoint == 0 || breakpoint < func_call->func->uf_lines.ga_len );
+
+    return breakpoint;
+}
+
+
+/*
  * Find a breakpoint for a function or sourced file.
  * Returns line number at which to break; zero when no matching breakpoint.
  */

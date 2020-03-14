@@ -3047,7 +3047,8 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
 	return;
     }
 
-    // FIXME: None of this will work with vim9script.
+    // FIXME: most of the useful parts of this (function, arg and script-local)
+    // won't work in vim9script
 
     switch( *scope )
     {

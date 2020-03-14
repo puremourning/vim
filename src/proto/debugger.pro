@@ -8,6 +8,7 @@ void ex_breakadd(exarg_T *eap);
 void ex_debuggreedy(exarg_T *eap);
 void ex_breakdel(exarg_T *eap);
 void ex_breaklist(exarg_T *eap);
+linenr_T dbg_find_breakpoint_in_func(funccall_T* func_call, linenr_T after);
 linenr_T dbg_find_breakpoint(int file, char_u *fname, linenr_T after);
 int has_profiling(int file, char_u *fname, int *fp);
 void dbg_breakpoint(char_u *name, linenr_T lnum);
