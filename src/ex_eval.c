@@ -1692,10 +1692,6 @@ ex_catch(exarg_T *eap)
 	    // interrupt had occurred before the ":catch".  That is, discard
 	    // the original exception, replace it by an interrupt exception,
 	    // and don't catch it in this try block.
-
-	    // TODO( BenJ ): This dbg_check_skipped is basically saying that it
-	    // will break on exception if and only if there was a breakpoint
-	    // that would have triggered if we hadn't thrown the exception.
 	    if (!dbg_check_skipped(eap) || !do_intthrow(cstack))
 	    {
 		// Terminate the pattern and avoid the 'l' flag in 'cpoptions'

@@ -24,6 +24,9 @@ static char_u *debug_oldval = NULL;	// old and newval for debug expressions
 static char_u *debug_newval = NULL;
 static int     debug_expr   = 0;        // use debug_expr
 
+static int	debug_busy = 0;		// if > 0, we're already in do_debug;
+					// don't do it recusively.
+
     int
 has_watchexpr(void)
 {
@@ -46,16 +49,16 @@ do_debug(char_u *cmd)
     int		save_msg_silent = msg_silent;
     int		save_emsg_silent = emsg_silent;
     int		save_redir_off = redir_off;
-    tasave_T	typeaheadbuf;
-    int		typeahead_saved = FALSE;
-    int		save_ignore_script = 0;
-    int		save_ex_normal_busy;
-    int		n;
+    int		save_debug_break_level;
     char_u	*cmdline = NULL;
     char_u	*p;
     char_u	*sname;
     char	*tail = NULL;
     static int	last_cmd = 0;
+    // TODO: This really needs to be an option
+    ufunc_T	*custom_debug_f = find_func( (char_u*)"DebugHook",
+					     TRUE,
+					     NULL );
 #define CMD_CONT	1
 #define CMD_NEXT	2
 #define CMD_STEP	3
@@ -77,6 +80,11 @@ do_debug(char_u *cmd)
     }
 #endif
 
+    if ( debug_busy )
+    {
+	return;
+    }
+
     // Make sure we are in raw mode and start termcap mode.  Might have side
     // effects...
     settmode(TMODE_RAW);
@@ -93,7 +101,7 @@ do_debug(char_u *cmd)
     State = NORMAL;
     debug_mode = TRUE;
 
-    if ( !find_func( (char_u*)"DebugHook", TRUE, NULL ) )
+    if ( !custom_debug_f )
     {
 	if (!debug_did_msg)
 	    msg(_("Entering Debug mode.  Type \"cont\" to continue."));
@@ -125,21 +133,6 @@ do_debug(char_u *cmd)
 	msg_scroll = TRUE;
 	need_wait_return = FALSE;
 
-	// Save the current typeahead buffer and replace it with an empty one.
-	// This makes sure we get input from the user here and don't interfere
-	// with the commands being executed.  Reset "ex_normal_busy" to avoid
-	// the side effects of using ":normal". Save the stuff buffer and make
-	// it empty. Set ignore_script to avoid reading from script input.
-	save_ex_normal_busy = ex_normal_busy;
-	ex_normal_busy = 0;
-	if (!debug_greedy)
-	{
-	    save_typeahead(&typeaheadbuf);
-	    typeahead_saved = TRUE;
-	    save_ignore_script = ignore_script;
-	    ignore_script = TRUE;
-	}
-
 	vim_free(cmdline);
 	// TODO(BenJ) i would like to delegate this action to a script function,
 	// eg. call_func_retstr, which for some reason returns void*, or
@@ -168,31 +161,88 @@ do_debug(char_u *cmd)
 	//
 	// TODO(BenJ): Change to an option so it can be unset.
 	//
-	if ( find_func( (char_u*)"DebugHook", TRUE, NULL ) )
+	if ( custom_debug_f )
 	{
-	    typval_T argv[] = { {VAR_UNKNOWN} };
+	    // see the stuff in time.c that gets saved when running a timer
+	    // callback. We have to save a _lot_ of state so that running this
+	    // command appears like it's running isolated
 
-	    n = debug_break_level;
+	    int		save_debug_backtrace_level = debug_backtrace_level;
+	    int		save_need_rethrow = need_rethrow;
+	    int		save_did_throw = did_throw;
+	    int		save_trylevel = trylevel;
+	    except_T	*save_current_exception = current_exception;
+	    int		save_called_emsg = called_emsg;
+	    vimvars_save_T vvsave;
+	    typval_T	argv[] = { {VAR_UNKNOWN} };
+
+	    save_debug_break_level = debug_break_level;
+	    save_did_emsg = did_emsg;
+
+	    debug_backtrace_level = 0;
+	    need_rethrow = FALSE;
+	    did_throw = FALSE;
+	    trylevel = 0;
+	    current_exception = NULL;
+	    called_emsg = 0;
+	    save_vimvars(&vvsave);
+
 	    debug_break_level = -1;
+	    did_emsg = 0;
+
+	    // Disable all debugging for the custom-debug function. This would
+	    // lead to an infinite loop!
+	    ++debug_busy;
 	    cmdline = call_func_retstr( (char_u*)"DebugHook", 0, argv );
-	    debug_break_level = n;
+	    --debug_busy;
+
+	    did_emsg = save_did_emsg;
+	    debug_break_level = save_debug_break_level;
+	    restore_vimvars(&vvsave);
+	    called_emsg = save_called_emsg;
+	    current_exception = save_current_exception;
+	    trylevel = save_trylevel;
+	    did_throw = save_did_throw;
+	    need_rethrow = save_need_rethrow;
+	    debug_backtrace_level = save_debug_backtrace_level;
 
 	    if (!*cmdline)
 	    {
-		cmdline = getcmdline_prompt('>', NULL, 0, EXPAND_NOTHING, NULL);
+		vim_free(cmdline);
+		cmdline = NULL;
 	    }
 	}
 	else
 	{
-	    cmdline = getcmdline_prompt('>', NULL, 0, EXPAND_NOTHING, NULL);
-	}
+	    int		typeahead_saved = FALSE;
+	    int		save_ex_normal_busy;
+	    int		save_ignore_script = 0;
+	    tasave_T	typeaheadbuf;
 
-	if (typeahead_saved)
-	{
-	    restore_typeahead(&typeaheadbuf);
-	    ignore_script = save_ignore_script;
+	    // Save the current typeahead buffer and replace it with an empty
+	    // one.  This makes sure we get input from the user here and don't
+	    // interfere with the commands being executed.  Reset
+	    // "ex_normal_busy" to avoid the side effects of using ":normal".
+	    // Save the stuff buffer and make it empty. Set ignore_script to
+	    // avoid reading from script input.
+	    save_ex_normal_busy = ex_normal_busy;
+	    ex_normal_busy = 0;
+	    if (!debug_greedy)
+	    {
+		save_typeahead(&typeaheadbuf);
+		typeahead_saved = TRUE;
+		save_ignore_script = ignore_script;
+		ignore_script = TRUE;
+	    }
+
+	    cmdline = getcmdline_prompt('>', NULL, 0, EXPAND_NOTHING, NULL);
+	    if (typeahead_saved)
+	    {
+		restore_typeahead(&typeaheadbuf);
+		ignore_script = save_ignore_script;
+	    }
+	    ex_normal_busy = save_ex_normal_busy;
 	}
-	ex_normal_busy = save_ex_normal_busy;
 
 	cmdline_row = msg_row;
 	msg_starthere();
@@ -322,11 +372,11 @@ do_debug(char_u *cmd)
 	    }
 
 	    // don't debug this command
-	    n = debug_break_level;
+	    save_debug_break_level = debug_break_level;
 	    debug_break_level = -1;
 	    (void)do_cmdline(cmdline, getexline, NULL,
 						DOCMD_VERBOSE|DOCMD_EXCRESET);
-	    debug_break_level = n;
+	    debug_break_level = save_debug_break_level;
 	}
 	lines_left = Rows - 1;
     }
@@ -483,6 +533,11 @@ dbg_check_breakpoint(exarg_T *eap)
 {
     char_u	*p;
 
+    if ( debug_busy )
+    {
+	return;
+    }
+;
     debug_skipped = FALSE;
     if (debug_breakpoint_name != NULL)
     {
@@ -529,6 +584,11 @@ dbg_check_breakpoint(exarg_T *eap)
 dbg_check_skipped(exarg_T *eap)
 {
     int		prev_got_int;
+
+    if ( debug_busy )
+    {
+	return FALSE;
+    }
 
     if (debug_skipped)
     {
@@ -1119,6 +1179,11 @@ debuggy_find(
     void
 dbg_breakpoint(char_u *name, linenr_T lnum)
 {
+    if ( debug_busy )
+    {
+	return;
+    }
+
     // We need to check if this line is actually executed in do_one_cmd()
     debug_breakpoint_name = name;
     debug_breakpoint_lnum = lnum;

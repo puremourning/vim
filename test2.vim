@@ -13,6 +13,8 @@ endfunction
 
 try
   call Test3()
+catch /this_will_not_match/
+  echom "This should not happen"
 catch /.*/
   echom "Exception was caught" v:exception
   call s:Recover( s:script_var )
