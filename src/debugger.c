@@ -38,6 +38,10 @@ has_watchexpr(void)
 /*
  * do_debug(): Debug mode.
  * Repeatedly get Ex commands, until told to continue normal execution.
+ *
+ * TODO: Add a 'reason' parameter to be passed to the custom debug func to
+ * explain _why_ we stopped. This is particularly relevant when we break on
+ * exiting a function due to a throw/error, and when we hit a catch/endif etc.
  */
     void
 do_debug(char_u *cmd)
