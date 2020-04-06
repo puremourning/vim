@@ -57,6 +57,7 @@ static void f_cos(typval_T *argvars, typval_T *rettv);
 static void f_cosh(typval_T *argvars, typval_T *rettv);
 #endif
 static void f_cursor(typval_T *argsvars, typval_T *rettv);
+static void f_debug_eval(typval_T *argvars, typval_T *rettv);
 static void f_debug_getstack(typval_T *argvars, typval_T *rettv);
 static void f_debug_getvariables(typval_T *argvars, typval_T *rettv);
 #ifdef MSWIN
@@ -890,6 +891,8 @@ static funcentry_T global_functions[] =
 			ret_number,	    f_cscope_connection},
     {"cursor",		1, 3, FEARG_1,	    NULL,
 			ret_number,	    f_cursor},
+    {"debug_eval",	2, 2, 0,	    NULL,
+			ret_any,	    f_debug_eval},
     {"debug_getstack",  0, 0, 0,	    NULL,
 			ret_list_dict_any,  f_debug_getstack},
     {"debug_getvariables", 2, 2, 0,	    NULL,
@@ -2979,7 +2982,7 @@ add_one_var(dictitem_T *v, char *prefix, list_T* list)
     char_u	numbuf[NUMBUFLEN];
     dict_T	*var = dict_alloc();
 
-    // TODO: This makes everything a stricng
+    // TODO: This makes everything a string
     char_u	*value = echo_string(&v->di_tv, &tofree, numbuf, get_copyID());
     int n_len = STRLEN(prefix)
 	      + STRLEN(v->di_key != NULL
@@ -3145,6 +3148,31 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
     default:
 	emsg( "Invalid syntax" );
     }
+}
+
+/*
+ * "debug_setlevel" function
+ */
+    static void
+f_debug_eval(typval_T *argvars, typval_T *rettv)
+{
+    int stack_level = argvars[ 0 ].vval.v_number;
+
+    int save_debug_backtrace_level = debug_backtrace_level;
+
+    if (stack_level >= estack_max_backtrace_level() ||
+	stack_level <= 0 )
+    {
+	debug_backtrace_level = 0;
+    }
+    else
+    {
+	debug_backtrace_level = estack_max_backtrace_level() - stack_level;
+    }
+
+    f_eval( argvars + 1, rettv );
+
+    debug_backtrace_level = save_debug_backtrace_level;
 }
 
 #ifdef MSWIN
