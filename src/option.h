@@ -515,6 +515,7 @@ EXTERN long	p_cspc;		// 'cscopepathcomp'
 EXTERN int	p_csverbose;	// 'cscopeverbose'
 #endif
 EXTERN char_u	*p_debug;	// 'debug'
+EXTERN char_u	*p_debugfunc;	// 'debugfunc'
 #ifdef FEAT_FIND_ID
 EXTERN char_u	*p_def;		// 'define'
 EXTERN char_u	*p_inc;

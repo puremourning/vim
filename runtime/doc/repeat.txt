@@ -785,7 +785,7 @@ The line number for a function line is relative to the start of the function.
 If you have trouble figuring out where you are, edit the file that defines
 the function in another Vim, search for the start of the function and do
 "99j".  Replace "99" with the line number.
-
+							*debug-commands*
 Additionally, these commands can be used:
 							*>cont*
 	cont		Continue execution until the next breakpoint is hit.

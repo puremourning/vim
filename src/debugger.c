@@ -12,6 +12,7 @@
  */
 
 #include "vim.h"
+#include "option.h"
 
 #if defined(FEAT_EVAL) || defined(PROTO)
 static int debug_greedy = FALSE;	// batch mode debugging: don't save
@@ -59,10 +60,6 @@ do_debug(char_u *cmd)
     char_u	*sname;
     char	*tail = NULL;
     static int	last_cmd = 0;
-    // TODO: This really needs to be an option
-    ufunc_T	*custom_debug_f = find_func( (char_u*)"DebugHook",
-					     TRUE,
-					     NULL );
 #define CMD_CONT	1
 #define CMD_NEXT	2
 #define CMD_STEP	3
@@ -105,7 +102,7 @@ do_debug(char_u *cmd)
     State = NORMAL;
     debug_mode = TRUE;
 
-    if ( !custom_debug_f )
+    if ( !*p_debugfunc )
     {
 	if (!debug_did_msg)
 	    msg(_("Entering Debug mode.  Type \"cont\" to continue."));
@@ -138,34 +135,8 @@ do_debug(char_u *cmd)
 	need_wait_return = FALSE;
 
 	vim_free(cmdline);
-	// TODO(BenJ) i would like to delegate this action to a script function,
-	// eg. call_func_retstr, which for some reason returns void*, or
-	// call_vim_function, which is more general
-	//
-	// idea:
-	//  - add an option 'debugtracefunc', then here call it.
-	//  - its job is to return a command line to execute in vim debugger
-	//    language
-	//  - it can call debug_getstack(), and other things that would be
-	//    useful in order to dtermine the current stack.
-	//  - need a way for it to access the current sctx_T for locals, script
-	//    locals, etc.
-	//
-	// We can allow the user func to work by doing what's done at the end of
-	// this loop (debug_break_level = -1), then restore it.
-	//
-	// Obviously it would be bad if this function triggered another
-	// breakpoint, but maybe it would just work?
-	//
-	// Basically, i'm dead keen to write the debugger as a plugin, not in
-	// the vim codebase, because it's easier.
-	// don't debug this command
-	//
-	// Approach below seems to work.
-	//
-	// TODO(BenJ): Change to an option so it can be unset.
-	//
-	if ( custom_debug_f )
+	// If the user configured a debugfunc, call it and get a command
+	if ( *p_debugfunc && find_func( p_debugfunc, NULL ) )
 	{
 	    // see the stuff in time.c that gets saved when running a timer
 	    // callback. We have to save a _lot_ of state so that running this
@@ -197,7 +168,7 @@ do_debug(char_u *cmd)
 	    // Disable all debugging for the custom-debug function. This would
 	    // lead to an infinite loop!
 	    ++debug_busy;
-	    cmdline = call_func_retstr( (char_u*)"DebugHook", 0, argv );
+	    cmdline = call_func_retstr( p_debugfunc, 0, argv );
 	    --debug_busy;
 
 	    did_emsg = save_did_emsg;

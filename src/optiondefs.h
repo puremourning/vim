@@ -808,6 +808,11 @@ static struct vimoption options[] =
     {"debug",	    NULL,   P_STRING|P_VI_DEF,
 			    (char_u *)&p_debug, PV_NONE,
 			    {(char_u *)"", (char_u *)0L} SCTX_INIT},
+    {"debugfunc",   NULL,    P_STRING|P_ALLOCED|P_VI_DEF|P_SECURE, /* flags */
+			    (char_u *)&p_debugfunc,
+			    PV_NONE,
+			    {(char_u *)"", (char_u *)0L} /* vi, vim deafults */
+			    SCTX_INIT}, /* boilerplate */
     {"define",	    "def",  P_STRING|P_ALLOCED|P_VI_DEF|P_CURSWANT,
 #ifdef FEAT_FIND_ID
 			    (char_u *)&p_def, PV_DEF,

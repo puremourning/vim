@@ -2527,6 +2527,28 @@ A jump table for the options with a short description can be found at |Q_op|.
 	"msg" and "throw" are useful for debugging 'foldexpr', 'formatexpr' or
 	'indentexpr'.
 
+						*'debugfunc'*
+'debugfunc'		string (default: empty)
+			global
+	This option specifies the name of a function to be called when
+	debugging scripts (|:debug|). When set to a non-empty string, the
+	function is called when a script breakpoint is hit (|:breakadd|),
+	instead of entering an interactive debug prompt, the named function is
+	called. The function must return a debug command as if typed by the
+	user in the interractive debugger (|debug-commands|). Additionally,
+	the usual debugging messages are not printed.
+
+	If the function returns an empty string, it is immediately called
+	again. To end debugging, retun "cont" (|>cont|).
+
+	The purpose of this delegation is to allow an external tool, such as a
+	Debug Adapter, to control execution of vim script commands, for
+	example by waiting for a command from a |channel|. Therefore, it is
+	not expected for this option to be set by users, rather by debug
+	plugins.
+
+	See |debug-scripts|.
+
 						*'define'* *'def'*
 'define' 'def'		string	(default "^\s*#\s*define")
 			global or local to buffer |global-local|

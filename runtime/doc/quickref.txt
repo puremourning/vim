@@ -673,6 +673,7 @@ Short explanation of each option:		*option-list*
 'cursorline'	  'cul'	    highlight the screen line of the cursor
 'cursorlineopt'	  'culopt'  settings for 'cursorline'
 'debug'			    set to "msg" to see all error messages
+'debugfunc'		    function called by ":debug" to get a debug command
 'define'	  'def'     pattern to be used to find a macro definition
 'delcombine'	  'deco'    delete combining characters on their own
 'dictionary'	  'dict'    list of file names used for keyword completion
