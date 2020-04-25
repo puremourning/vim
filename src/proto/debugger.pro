@@ -1,6 +1,6 @@
 /* debugger.c */
 int has_watchexpr(void);
-void do_debug(char_u *cmd);
+void do_debug(char_u *cmd, char_u* reason);
 void ex_debug(exarg_T *eap);
 void dbg_check_breakpoint(exarg_T *eap);
 int dbg_check_skipped(exarg_T *eap);
