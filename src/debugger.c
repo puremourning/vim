@@ -746,6 +746,15 @@ dbg_parsearg(
 }
 
 /*
+ * ":breakint". interrupt and go into debug mode asap
+ */
+    void
+ex_breakint(exarg_T *eap)
+{
+    debug_break_level = 9999;
+}
+
+/*
  * ":breakadd".  Also used for ":profile".
  */
     void
