@@ -136,7 +136,7 @@ do_debug(char_u *cmd)
 
 	vim_free(cmdline);
 	// If the user configured a debugfunc, call it and get a command
-	if ( *p_debugfunc && find_func( p_debugfunc, NULL ) )
+	if ( *p_debugfunc && find_func( p_debugfunc, TRUE, NULL ) )
 	{
 	    // see the stuff in time.c that gets saved when running a timer
 	    // callback. We have to save a _lot_ of state so that running this
@@ -725,6 +725,15 @@ dbg_parsearg(
     if (bp->dbg_name == NULL)
 	return FAIL;
     return OK;
+}
+
+/*
+ * ":breakint". interrupt and go into debug mode asap
+ */
+    void
+ex_breakint(exarg_T *eap)
+{
+    debug_break_level = 9999;
 }
 
 /*

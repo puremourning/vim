@@ -1391,8 +1391,8 @@ do_cmdline(
 		    || getline_equal(fgetline, cookie, get_func_line))
 		&& ex_nesting_level + 1 <= debug_break_level)
 	    do_debug(getline_equal(fgetline, cookie, getsourceline)
-		    ? (char_u *)_("End of sourced file")
-		    : (char_u *)_("End of function"));
+			 ? (char_u *)_("End of sourced file")
+			 : (char_u *)_("End of function"));
     }
 
     /*

@@ -4,6 +4,7 @@ void do_debug(char_u *cmd);
 void ex_debug(exarg_T *eap);
 void dbg_check_breakpoint(exarg_T *eap);
 int dbg_check_skipped(exarg_T *eap);
+void ex_breakint(exarg_T *eap);
 void ex_breakadd(exarg_T *eap);
 void ex_debuggreedy(exarg_T *eap);
 void ex_breakdel(exarg_T *eap);
