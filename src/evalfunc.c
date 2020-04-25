@@ -2982,7 +2982,7 @@ add_one_var(dictitem_T *v, char *prefix, list_T* list)
     char_u	numbuf[NUMBUFLEN];
     dict_T	*var = dict_alloc();
 
-    // TODO: This makes everything a string
+    // TODO: This makes everything a string, and doesn't wrk for blobs
     char_u	*value = echo_string(&v->di_tv, &tofree, numbuf, get_copyID());
     int n_len = STRLEN(prefix)
 	      + STRLEN(v->di_key != NULL
