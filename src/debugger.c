@@ -45,7 +45,7 @@ has_watchexpr(void)
  * exiting a function due to a throw/error, and when we hit a catch/endif etc.
  */
     void
-do_debug(char_u *cmd)
+do_debug(char_u *cmd, char_u* reason)
 {
     int		save_msg_scroll = msg_scroll;
     int		save_State = State;
@@ -149,7 +149,8 @@ do_debug(char_u *cmd)
 	    except_T	*save_current_exception = current_exception;
 	    int		save_called_emsg = called_emsg;
 	    vimvars_save_T vvsave;
-	    typval_T	argv[] = { {VAR_UNKNOWN} };
+	    typval_T	argv[] = { {VAR_STRING}, {VAR_UNKNOWN} };
+	    argv[0].vval.v_string = reason;
 
 	    save_debug_break_level = debug_break_level;
 	    save_did_emsg = did_emsg;
@@ -168,7 +169,7 @@ do_debug(char_u *cmd)
 	    // Disable all debugging for the custom-debug function. This would
 	    // lead to an infinite loop!
 	    ++debug_busy;
-	    cmdline = call_func_retstr( p_debugfunc, 0, argv );
+	    cmdline = call_func_retstr( p_debugfunc, 1, argv );
 	    --debug_busy;
 
 	    did_emsg = save_did_emsg;
@@ -530,7 +531,7 @@ dbg_check_breakpoint(exarg_T *eap)
 		    debug_breakpoint_name + (*p == NUL ? 0 : 3),
 		    (long)debug_breakpoint_lnum);
 	    debug_breakpoint_name = NULL;
-	    do_debug(eap->cmd);
+	    do_debug(eap->cmd, (char_u*)"breakpoint");
 	}
 	else
 	{
@@ -542,7 +543,7 @@ dbg_check_breakpoint(exarg_T *eap)
     else if (ex_nesting_level <= debug_break_level)
     {
 	if (!eap->skip)
-	    do_debug(eap->cmd);
+	    do_debug(eap->cmd, (char_u*)"step");
 	else
 	{
 	    debug_skipped = TRUE;
