@@ -131,9 +131,6 @@ do_debug(char_u *cmd, char_u* reason)
     // Repeat getting a command and executing it.
     for (;;)
     {
-	msg_scroll = TRUE;
-	need_wait_return = FALSE;
-
 	vim_free(cmdline);
 	// If the user configured a debugfunc, call it and get a command
 	if ( *p_debugfunc && find_func( p_debugfunc, TRUE, NULL ) )
@@ -184,12 +181,14 @@ do_debug(char_u *cmd, char_u* reason)
 
 	    if (!*cmdline)
 	    {
-		vim_free(cmdline);
-		cmdline = NULL;
+		break;
 	    }
 	}
 	else
 	{
+	    msg_scroll = TRUE;
+	    need_wait_return = FALSE;
+
 	    int		typeahead_saved = FALSE;
 	    int		save_ex_normal_busy;
 	    int		save_ignore_script = 0;
@@ -218,10 +217,10 @@ do_debug(char_u *cmd, char_u* reason)
 		ignore_script = save_ignore_script;
 	    }
 	    ex_normal_busy = save_ex_normal_busy;
+	    cmdline_row = msg_row;
+	    msg_starthere();
 	}
 
-	cmdline_row = msg_row;
-	msg_starthere();
 	if (cmdline != NULL)
 	{
 	    // If this is a debug command, set "last_cmd".
@@ -320,9 +319,15 @@ do_debug(char_u *cmd, char_u* reason)
 			last_cmd = CMD_STEP;
 			break;
 		    case CMD_BACKTRACE:
+			if (*p_debugfunc)
+			    continue;
+
 			do_showbacktrace(cmd);
 			continue;
 		    case CMD_FRAME:
+			if (*p_debugfunc)
+			    continue;
+
 			if (*p == NUL)
 			{
 			    do_showbacktrace(cmd);
@@ -334,10 +339,16 @@ do_debug(char_u *cmd, char_u* reason)
 			}
 			continue;
 		    case CMD_UP:
+			if (*p_debugfunc)
+			    continue;
+
 			debug_backtrace_level++;
 			do_checkbacktracelevel();
 			continue;
 		    case CMD_DOWN:
+			if (*p_debugfunc)
+			    continue;
+
 			debug_backtrace_level--;
 			do_checkbacktracelevel();
 			continue;
@@ -354,7 +365,8 @@ do_debug(char_u *cmd, char_u* reason)
 						DOCMD_VERBOSE|DOCMD_EXCRESET);
 	    debug_break_level = save_debug_break_level;
 	}
-	lines_left = Rows - 1;
+	if (!*p_debugfunc)
+	    lines_left = Rows - 1;
     }
     vim_free(cmdline);
 
