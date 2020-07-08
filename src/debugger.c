@@ -392,6 +392,7 @@ do_debug(char_u *cmd, char_u* reason)
     static int
 get_maxbacktrace_level(char_u *sname)
 {
+    // TODO(BenJ): use the estack
     char	*p, *q;
     int		maxbacktrace = 0;
 
@@ -424,6 +425,7 @@ do_setdebugtracelevel(char_u *arg)
     static void
 do_checkbacktracelevel(void)
 {
+    // TODO(BenJ): use the estack
     if (debug_backtrace_level < 0)
     {
 	debug_backtrace_level = 0;
@@ -941,8 +943,12 @@ ex_breaklist(exarg_T *eap UNUSED)
 
 /*
  * Find a breakpoint for a function.
- * Returns the line number within the function at which to break or 0 if there
- * is no appropriate breakpoint.
+ *
+ * If there's a function breakpoint defined, returns that. Otherwise if there's
+ * a file/line breakpoint defined within the body of the funciton, return that.
+ *
+ * Returns the ealiest line number within the function at which to break or 0 if
+ * there is no appropriate breakpoint.
  */
     linenr_T
 dbg_find_breakpoint_in_func(
