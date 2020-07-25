@@ -3037,7 +3037,10 @@ exe_pre_commands(mparm_T *parmp)
     if (cnt > 0)
     {
 	curwin->w_cursor.lnum = 0; // just in case..
-	estack_push(ETYPE_ARGS, (char_u *)_("pre-vimrc command line"), 0);
+	estack_push_special(ETYPE_ARGS,
+			    SID_CMDARG,
+			    (char_u *)_("pre-vimrc command line"),
+			    0);
 	ESTACK_CHECK_SETUP
 # ifdef FEAT_EVAL
 	current_sctx.sc_sid = SID_CMDARG;
@@ -3070,7 +3073,10 @@ exe_commands(mparm_T *parmp)
     msg_scroll = TRUE;
     if (parmp->tagname == NULL && curwin->w_cursor.lnum <= 1)
 	curwin->w_cursor.lnum = 0;
-    estack_push(ETYPE_ARGS, (char_u *)"command line", 0);
+    estack_push_special(ETYPE_ARGS,
+			SID_CARG,
+			(char_u *)"command line",
+			0);
     ESTACK_CHECK_SETUP
 #ifdef FEAT_EVAL
     current_sctx.sc_sid = SID_CARG;
@@ -3308,7 +3314,7 @@ process_env(
     {
 	if (is_viminit)
 	    vimrc_found(NULL, NULL);
-	estack_push(ETYPE_ENV, env, 0);
+	estack_push_special(ETYPE_ENV, SID_ENV, env, 0);
 	ESTACK_CHECK_SETUP
 	save_current_sctx = current_sctx;
 	current_sctx.sc_version = 1;

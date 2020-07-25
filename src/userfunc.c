@@ -37,6 +37,7 @@ static char *e_nofunc = N_("E130: Unknown function: %s");
 static void funccal_unref(funccall_T *fc, ufunc_T *fp, int force);
 static void func_clear(ufunc_T *fp, int force);
 static int func_free(ufunc_T *fp, int force);
+static funccall_T * get_funccal(void);
 
     void
 func_init()
@@ -2527,7 +2528,7 @@ call_user_func(
 	++sandbox;
     }
 
-    estack_push_ufunc(fp, 1);
+    estack_push_ufunc(fc);
     ESTACK_CHECK_SETUP
     if (p_verbose >= 12)
     {
@@ -2789,6 +2790,8 @@ restore_funccal(void)
     funccall_T *
 get_current_funccal(void)
 {
+    if (debug_backtrace_level > 0)
+	return get_funccal();
     return current_funccal;
 }
 
@@ -5298,21 +5301,21 @@ free_unref_funccal(int copyID, int testing)
     static funccall_T *
 get_funccal(void)
 {
-    int		i;
     funccall_T	*funccal;
-    funccall_T	*temp_funccal;
 
     funccal = current_funccal;
     if (debug_backtrace_level > 0)
     {
-	for (i = 0; i < debug_backtrace_level; i++)
+	estack_T *stack_frame =
+	    estack_get_backtrace_level(debug_backtrace_level);
+
+	if (stack_frame->es_type == ETYPE_UFUNC)
 	{
-	    temp_funccal = funccal->caller;
-	    if (temp_funccal)
-		funccal = temp_funccal;
-	    else
-		// backtrace level overflow. reset to max
-		debug_backtrace_level = i;
+	    funccal = stack_frame->es_info.ufunc;
+	}
+	else
+	{
+	    funccal = NULL;
 	}
     }
     return funccal;
@@ -5325,7 +5328,7 @@ get_funccal(void)
     hashtab_T *
 get_funccal_local_ht()
 {
-    if (current_funccal == NULL || current_funccal->l_vars.dv_refcount == 0)
+    if (get_funccal() == NULL || get_funccal()->l_vars.dv_refcount == 0)
 	return NULL;
     return &get_funccal()->l_vars.dv_hashtab;
 }
@@ -5337,7 +5340,7 @@ get_funccal_local_ht()
     dictitem_T *
 get_funccal_local_var()
 {
-    if (current_funccal == NULL || current_funccal->l_vars.dv_refcount == 0)
+    if (get_funccal() == NULL || get_funccal()->l_vars.dv_refcount == 0)
 	return NULL;
     return &get_funccal()->l_vars_var;
 }
@@ -5349,7 +5352,7 @@ get_funccal_local_var()
     hashtab_T *
 get_funccal_args_ht()
 {
-    if (current_funccal == NULL || current_funccal->l_vars.dv_refcount == 0)
+    if (get_funccal() == NULL || get_funccal()->l_vars.dv_refcount == 0)
 	return NULL;
     return &get_funccal()->l_avars.dv_hashtab;
 }
@@ -5361,7 +5364,7 @@ get_funccal_args_ht()
     dictitem_T *
 get_funccal_args_var()
 {
-    if (current_funccal == NULL || current_funccal->l_vars.dv_refcount == 0)
+    if (get_funccal() == NULL || get_funccal()->l_vars.dv_refcount == 0)
 	return NULL;
     return &get_funccal()->l_avars_var;
 }
@@ -5372,9 +5375,11 @@ get_funccal_args_var()
     void
 list_func_vars(int *first)
 {
-    if (current_funccal != NULL && current_funccal->l_vars.dv_refcount > 0)
-	list_hashtable_vars(&current_funccal->l_vars.dv_hashtab,
-							   "l:", FALSE, first);
+    if (get_funccal() != NULL && get_funccal()->l_vars.dv_refcount > 0)
+	list_hashtable_vars(&get_funccal()->l_vars.dv_hashtab,
+			    "l:",
+			    FALSE,
+			    first);
 }
 
 /*
@@ -5385,9 +5390,10 @@ list_func_vars(int *first)
     dict_T *
 get_current_funccal_dict(hashtab_T *ht)
 {
-    if (current_funccal != NULL
-	    && ht == &current_funccal->l_vars.dv_hashtab)
-	return &current_funccal->l_vars;
+    // FIXME: shouldn't this check get_funccal() ?
+    if (get_funccal() != NULL
+	    && ht == &get_funccal()->l_vars.dv_hashtab)
+	return &get_funccal()->l_vars;
     return NULL;
 }
 
