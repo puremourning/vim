@@ -1264,8 +1264,10 @@ do_cmdline(
 		    break;
 	    }
 
-	    estack_push(ETYPE_EXCEPT, current_exception->throw_name,
-						current_exception->throw_lnum);
+	    // TODO: we don't know the scid for the throwpoint
+	    estack_push(ETYPE_EXCEPT,
+			current_exception->throw_name,
+			current_exception->throw_lnum);
 	    ESTACK_CHECK_SETUP
 	    current_exception->throw_name = NULL;
 

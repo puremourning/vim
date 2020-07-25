@@ -231,7 +231,13 @@ call_dfunc(int cdf_idx, int argcount_arg, ectx_T *ectx)
     // Set execution state to the start of the called function.
     ectx->ec_dfunc_idx = cdf_idx;
     ectx->ec_instr = dfunc->df_instr;
-    entry = estack_push_ufunc(dfunc->df_ufunc, 1);
+    // TODO(BenJ): We need some way to augment this call with info about how to
+    // get the local variables, and possibly also any script-local variables in
+    // the case of 'vim9script' or other module-y stuff; for now we don't really
+    // interpret this. Equally, we need to special-case the expression
+    // evaluation and probably breakpoint triggering.
+    // Probably, we need to pass either the dfunc itself, or the cctx ?
+    entry = estack_push_dfunc(dfunc->df_ufunc, 1);
     if (entry != NULL)
     {
 	// Set the script context to the script where the function was defined.

@@ -2565,6 +2565,42 @@ get_script_local_ht(void)
 {
     scid_T sid = current_sctx.sc_sid;
 
+    // TODO(BenJ): Naively, it would seem that we could grab the sid from the
+    // debug_backtrace_level here, and stuff might work. Let's see if that
+    // works.
+    if (debug_backtrace_level > 0)
+    {
+	estack_T *stack_frame =
+	    estack_get_backtrace_level(debug_backtrace_level);
+
+	switch (stack_frame->es_type)
+	{
+	    case ETYPE_AUCMD:
+		sid = stack_frame->es_info.aucmd->script_ctx.sc_sid;
+		break;
+
+	    case ETYPE_UFUNC:
+		sid = stack_frame->es_info.ufunc->func->uf_script_ctx.sc_sid;
+		break;
+
+	    case ETYPE_SCRIPT:
+		sid = stack_frame->es_info.scid;
+		break;
+
+	    case ETYPE_DFUNC:
+		// TODO
+	    case ETYPE_TOP:
+	    case ETYPE_ENV:
+	    case ETYPE_ARGS:
+	    case ETYPE_SPELL:
+	    case ETYPE_EXCEPT:
+	    case ETYPE_INTERNAL:
+	    case ETYPE_MODELINE:
+		sid = 0;
+		break;
+	}
+    }
+
     if (sid > 0 && sid <= script_items.ga_len)
 	return &SCRIPT_VARS(sid);
     return NULL;

@@ -7015,7 +7015,7 @@ compile_def_function(ufunc_T *ufunc, int set_return_type, cctx_T *outer_cctx)
     // Make sure error messages are OK.
     do_estack_push = !estack_top_is_ufunc(ufunc, 1);
     if (do_estack_push)
-	estack_push_ufunc(ufunc, 1);
+	estack_push_dfunc(ufunc, 1);
 
     if (ufunc->uf_def_args.ga_len > 0)
     {

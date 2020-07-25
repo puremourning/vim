@@ -13,69 +13,6 @@
 
 #include "vim.h"
 
-/*
- * The autocommands are stored in a list for each event.
- * Autocommands for the same pattern, that are consecutive, are joined
- * together, to avoid having to match the pattern too often.
- * The result is an array of Autopat lists, which point to AutoCmd lists:
- *
- * last_autopat[0]  -----------------------------+
- *						 V
- * first_autopat[0] --> Autopat.next  -->  Autopat.next -->  NULL
- *			Autopat.cmds	   Autopat.cmds
- *			    |			 |
- *			    V			 V
- *			AutoCmd.next	   AutoCmd.next
- *			    |			 |
- *			    V			 V
- *			AutoCmd.next		NULL
- *			    |
- *			    V
- *			   NULL
- *
- * last_autopat[1]  --------+
- *			    V
- * first_autopat[1] --> Autopat.next  -->  NULL
- *			Autopat.cmds
- *			    |
- *			    V
- *			AutoCmd.next
- *			    |
- *			    V
- *			   NULL
- *   etc.
- *
- *   The order of AutoCmds is important, this is the order in which they were
- *   defined and will have to be executed.
- */
-typedef struct AutoCmd
-{
-    char_u	    *cmd;		// The command to be executed (NULL
-					// when command has been removed).
-    char	    once;		// "One shot": removed after execution
-    char	    nested;		// If autocommands nest here.
-    char	    last;		// last command in list
-#ifdef FEAT_EVAL
-    sctx_T	    script_ctx;		// script context where defined
-#endif
-    struct AutoCmd  *next;		// next AutoCmd in list
-} AutoCmd;
-
-typedef struct AutoPat
-{
-    struct AutoPat  *next;		// Next AutoPat in AutoPat list; MUST
-					// be the first entry.
-    char_u	    *pat;		// pattern as typed (NULL when pattern
-					// has been removed)
-    regprog_T	    *reg_prog;		// compiled regprog for pattern
-    AutoCmd	    *cmds;		// list of commands to do
-    int		    group;		// group ID
-    int		    patlen;		// strlen() of pat
-    int		    buflocal_nr;	// !=0 for buffer-local AutoPat
-    char	    allow_dirs;		// Pattern may match whole path
-    char	    last;		// last pattern for apply_autocmds()
-} AutoPat;
-
 static struct event_name
 {
     char	*name;	// event name
@@ -216,23 +153,6 @@ static AutoPat *last_autopat[NUM_EVENTS] =
 #define AUGROUP_DEFAULT    -1	    // default autocmd group
 #define AUGROUP_ERROR	   -2	    // erroneous autocmd group
 #define AUGROUP_ALL	   -3	    // all autocmd groups
-
-/*
- * struct used to keep status while executing autocommands for an event.
- */
-struct AutoPatCmd_S
-{
-    AutoPat	*curpat;	// next AutoPat to examine
-    AutoCmd	*nextcmd;	// next AutoCmd to execute
-    int		group;		// group being used
-    char_u	*fname;		// fname to match with
-    char_u	*sfname;	// sfname to match with
-    char_u	*tail;		// tail of fname
-    event_T	event;		// current event
-    int		arg_bufnr;	// Initially equal to <abuf>, set to zero when
-				// buf is deleted.
-    AutoPatCmd   *next;		// chain of active apc-s for auto-invalidation
-};
 
 static AutoPatCmd *active_apc_list = NULL; // stack of active autocommands
 
@@ -2070,6 +1990,7 @@ apply_autocmds_group(
     patcmd.event = event;
     patcmd.arg_bufnr = autocmd_bufnr;
     patcmd.next = NULL;
+    // This call sets SOURCING_LNUM and SOURCING_NAME
     auto_next_pat(&patcmd, FALSE);
 
     // found one, start executing the autocommands
@@ -2252,6 +2173,9 @@ auto_next_pat(
     AutoCmd	*cp;
     char_u	*name;
     char	*s;
+
+    // TODO(BenJ): Stop directly manipulating SOURCING_NAME and instead do the
+    // estack push here ?
     char_u	**sourcing_namep = &SOURCING_NAME;
 
     VIM_CLEAR(*sourcing_namep);
@@ -2361,6 +2285,9 @@ getnextac(int c UNUSED, void *cookie, int indent UNUSED, int do_concat UNUSED)
 #ifdef FEAT_EVAL
     current_sctx = ac->script_ctx;
 #endif
+    assert( estack_get_backtrace_level(0)->es_type == ETYPE_AUCMD );
+    estack_get_backtrace_level(0)->es_info.aucmd = ac;
+
     if (ac->last)
 	acp->nextcmd = NULL;
     else

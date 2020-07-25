@@ -1214,7 +1214,7 @@ call_user_func(
 
     if (fp->uf_def_status != UF_NOT_COMPILED)
     {
-	estack_push_ufunc(fp, 1);
+	estack_push_dfunc(fp, 1);
 	save_current_sctx = current_sctx;
 	current_sctx = fp->uf_script_ctx;
 
@@ -1388,7 +1388,7 @@ call_user_func(
 	++sandbox;
     }
 
-    estack_push_ufunc(fp, 1);
+    estack_push_ufunc(fc);
     ESTACK_CHECK_SETUP
     if (p_verbose >= 12)
     {
@@ -4366,21 +4366,17 @@ free_unref_funccal(int copyID, int testing)
     static funccall_T *
 get_funccal(void)
 {
-    int		i;
     funccall_T	*funccal;
-    funccall_T	*temp_funccal;
 
     funccal = current_funccal;
     if (debug_backtrace_level > 0)
     {
-	for (i = 0; i < debug_backtrace_level; i++)
+	estack_T *stack_frame =
+	    estack_get_backtrace_level(debug_backtrace_level);
+
+	if (stack_frame->es_type == ETYPE_UFUNC)
 	{
-	    temp_funccal = funccal->caller;
-	    if (temp_funccal)
-		funccal = temp_funccal;
-	    else
-		// backtrace level overflow. reset to max
-		debug_backtrace_level = i;
+	    funccal = stack_frame->es_info.ufunc;
 	}
     }
     return funccal;
@@ -4453,6 +4449,7 @@ list_func_vars(int *first)
     dict_T *
 get_current_funccal_dict(hashtab_T *ht)
 {
+    // FIXME: shouldn't this check get_funccal() ?
     if (current_funccal != NULL
 	    && ht == &current_funccal->l_vars.dv_hashtab)
 	return &current_funccal->l_vars;
