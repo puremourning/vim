@@ -39,6 +39,48 @@ estack_init(void)
 }
 
 /*
+ * Returns the index of the latest entry in the execution stack. This is the
+ * index of the currently executing stack frame.
+ */
+    int
+estack_max_level()
+{
+    return exestack.ga_len - 1;
+}
+
+/*
+ * Returns the estack entry at level supplied. These are numbered from 0 being
+ * the _earliest_ frame, to estack_max_level() being the current
+ * frame.
+ */
+    estack_T*
+estack_get_level( int level )
+{
+    assert(level <= estack_max_level());
+    return ((estack_T *)exestack.ga_data) + level;
+}
+
+/*
+ * Returns the estack entry at backtrace level supplied. Similar to
+ * estack_get_level(), but returns the stack frames indexed from latest to
+ * earliest (with backtrace level 0 being the current executing frame, and
+ * estack_max_level() being the earliest frame).
+ *
+ * The backtrace level is the number of (0-indexed) stack frames "up" from the
+ * current executing frame that we are currently intropecting.
+ *
+ * Therefore:
+ *  - 0 is always the currently executing (latest) stack frame
+ *  - 1 is the "previous" stack frame (once up the stack)
+ *  - N is the very earliest stack frame - always ETYPE_TOP
+ */
+    estack_T*
+estack_get_backtrace_level( int level )
+{
+    return ((estack_T *)exestack.ga_data) + (estack_max_level() - level);
+}
+
+/*
  * Add an item to the execution stack.
  * Returns the new entry or NULL when out of memory.
  */
@@ -65,22 +107,70 @@ estack_push(etype_T type, char_u *name, long lnum)
 }
 
 #if defined(FEAT_EVAL) || defined(PROTO)
+    estack_T *
+estack_push_script(etype_T type, scid_T scid, long lnum)
+{
+    scriptitem_T *sitem = SCRIPT_ITEM(scid);
+    estack_T* entry = estack_push(type, sitem->sn_name, lnum);
+    if (entry != NULL)
+	entry->es_info.scid = scid;
+    return entry;
+}
+#endif
+
+    estack_T *
+estack_push_special(etype_T type,
+		    scid_T scid,
+		    char_u *sourcing_name,
+		    long lnum )
+{
+    estack_T *entry = estack_push(type, sourcing_name, lnum);
+    if (entry != NULL)
+	entry->es_info.scid = scid;
+    return entry;
+}
+
+#if defined(FEAT_EVAL) || defined(PROTO)
 /*
  * Add a user function to the execution stack.
  */
     estack_T *
-estack_push_ufunc(ufunc_T *ufunc, long lnum)
+estack_push_ufunc(funccall_T *ufunc)
 {
     estack_T *entry = estack_push(ETYPE_UFUNC,
-	    ufunc->uf_name_exp != NULL
-				  ? ufunc->uf_name_exp : ufunc->uf_name, lnum);
+				  ufunc->func->uf_name_exp != NULL
+				    ? ufunc->func->uf_name_exp
+				    : ufunc->func->uf_name,
+				  ufunc->linenr);
     if (entry != NULL)
 	entry->es_info.ufunc = ufunc;
     return entry;
 }
 
+
+// TODO: Need to work out how to handle dfuncs. CUrrently the code for dfuncs is
+// basially the _old_ code for ufuncs and it's getting more and more pointless
+// and confusing. Probably the right thing to do is to put the cctx_t in the
+// estack
+    estack_T *
+estack_push_dfunc(ufunc_T *ufunc, long lnum)
+{
+    estack_T *entry = estack_push(ETYPE_DFUNC,
+				  ufunc->uf_name_exp != NULL
+				    ? ufunc->uf_name_exp
+				    : ufunc->uf_name,
+				  lnum);
+    if (entry != NULL)
+	entry->es_info.dfunc = ufunc;
+    return entry;
+}
+
 /*
  * Return TRUE if "ufunc" with "lnum" is already at the top of the exe stack.
+ *
+ * TODO(Ben): This is only used by vim9compile, presumably to make sure that
+ * errors messages look sane, so there's probably a better way, or that's just
+ * not compatible with using this stack as a debug call stack.
  */
     int
 estack_top_is_ufunc(ufunc_T *ufunc, long lnum)
@@ -90,11 +180,12 @@ estack_top_is_ufunc(ufunc_T *ufunc, long lnum)
     if (exestack.ga_len == 0)
 	return FALSE;
     entry = ((estack_T *)exestack.ga_data) + exestack.ga_len - 1;
-    return entry->es_type == ETYPE_UFUNC
+    return ( entry->es_type == ETYPE_UFUNC || entry->es_type == ETYPE_DFUNC )
 	&& STRCMP( entry->es_name, ufunc->uf_name_exp != NULL
 				    ? ufunc->uf_name_exp : ufunc->uf_name) == 0
 	&& entry->es_lnum == lnum;
 }
+
 #endif
 
 /*
@@ -127,7 +218,9 @@ estack_sfile(estack_arg_T which UNUSED)
 
     entry = ((estack_T *)exestack.ga_data) + exestack.ga_len - 1;
 #ifdef FEAT_EVAL
-    if (which == ESTACK_SFILE && entry->es_type != ETYPE_UFUNC)
+    if (which == ESTACK_SFILE &&
+	entry->es_type != ETYPE_UFUNC &&
+	entry->es_type != ETYPE_DFUNC)
 #endif
     {
 	if (entry->es_name == NULL)
@@ -154,7 +247,8 @@ estack_sfile(estack_arg_T which UNUSED)
 		switch (entry->es_type)
 		{
 		    case ETYPE_SCRIPT: type_name = "script "; break;
-		    case ETYPE_UFUNC: type_name = "function "; break;
+		    case ETYPE_UFUNC:
+		    case ETYPE_DFUNC: type_name = "function "; break;
 		    default: type_name = ""; break;
 		}
 		last_type = entry->es_type;
@@ -1267,10 +1361,6 @@ do_source(
     cookie.level = ex_nesting_level;
 #endif
 
-    // Keep the sourcing name/lnum, for recursive calls.
-    estack_push(ETYPE_SCRIPT, fname_exp, 0);
-    ESTACK_CHECK_SETUP
-
 #ifdef STARTUPTIME
     if (time_fd != NULL)
 	time_push(&tv_rel, &tv_start);
@@ -1290,6 +1380,14 @@ do_source(
     save_funccal(&funccalp_entry);
 
     current_sctx.sc_lnum = 0;
+
+    // FIXME(BenJ): current_sctx is not a pointer, but what we put in the estack
+    // needs to actually be a pointer to the right value. Currently we're saving
+    // current_sctx in various method-locals which aren't really accessible.
+    //
+    // The way this works for funccal is to push pointer to to a stack of
+    // funccals in addition to the executtion stack. we need to do taht for
+    // sourcing script contexts too.
 
     // Check if this script was sourced before to finds its SID.
     // Always use a new sequence number.
@@ -1359,6 +1457,16 @@ do_source(
 	// Used to check script variable index is still valid.
 	si->sn_script_seq = current_sctx.sc_seq;
     }
+#endif // FEAT_EVAL
+
+#if !defined(FEAT_EVAL)
+    // Use a simle estack entry
+    estack_push(ETYPE_SCRIPT, fname_exp, 0);
+    ESTACK_CHECK_SETUP
+#else
+    // Keep the sourcing name/lnum, for recursive calls.
+    estack_push_script(ETYPE_SCRIPT, current_sctx.sc_sid, 0);
+    ESTACK_CHECK_SETUP
 
 # ifdef FEAT_PROFILE
     if (do_profiling == PROF_YES)

@@ -48,7 +48,7 @@ do_debug(char_u *cmd)
     int		typeahead_saved = FALSE;
     int		save_ignore_script = 0;
     int		save_ex_normal_busy;
-    int		n;
+    int		save_debug_break_level;
     char_u	*cmdline = NULL;
     char_u	*p;
     char_u	*sname;
@@ -273,11 +273,11 @@ do_debug(char_u *cmd)
 	    }
 
 	    // don't debug this command
-	    n = debug_break_level;
+	    save_debug_break_level = debug_break_level;
 	    debug_break_level = -1;
 	    (void)do_cmdline(cmdline, getexline, NULL,
 						DOCMD_VERBOSE|DOCMD_EXCRESET);
-	    debug_break_level = n;
+	    debug_break_level = save_debug_break_level;
 	}
 	lines_left = Rows - 1;
     }
@@ -305,6 +305,7 @@ do_debug(char_u *cmd)
     static int
 get_maxbacktrace_level(char_u *sname)
 {
+    // TODO(BenJ): use the estack
     char	*p, *q;
     int		maxbacktrace = 0;
 
@@ -337,6 +338,7 @@ do_setdebugtracelevel(char_u *arg)
     static void
 do_checkbacktracelevel(void)
 {
+    // TODO(BenJ): use the estack
     if (debug_backtrace_level < 0)
     {
 	debug_backtrace_level = 0;
@@ -359,6 +361,8 @@ do_checkbacktracelevel(void)
     static void
 do_showbacktrace(char_u *cmd)
 {
+    // TODO(BenJ): This is strying to write a backtrace based on the
+    // estack_sfile() output, but it would really just use the estack directly
     char_u  *sname;
     char    *cur;
     char    *next;

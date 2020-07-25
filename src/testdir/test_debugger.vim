@@ -1018,14 +1018,10 @@ func Test_debug_backtrace_level()
         \ #{ match: 'pattern' } )
 
   " Expression evaluation in the script frame (not the function frame)
-  " FIXME: Unexpected in this scope (a: should not be visibnle)
-  call RunDbgCmd(buf, 'echo a:arg', [ 'arg1' ] )
+  call RunDbgCmd(buf, 'echo a:arg', [ 'E121: Undefined variable: a:arg' ] )
   call RunDbgCmd(buf, 'echo s:file1_var', [ 'file1' ] )
   call RunDbgCmd(buf, 'echo g:global_var', [ 'global' ] )
-  " FIXME: Unexpected in this scope (global should be found)
-  call RunDbgCmd(buf,
-                \'echo global_var',
-                \[ 'E121: Undefined variable: global_var' ] )
+  call RunDbgCmd(buf, 'echo global_var', [ 'global' ] )
   call RunDbgCmd(buf,
                 \'echo local_var',
                 \[ 'E121: Undefined variable: local_var' ] )
@@ -1093,11 +1089,8 @@ func Test_debug_backtrace_level()
         \ '\Vline 3: func s:File2Func( arg )',
         \ ],
         \ #{ match: 'pattern' } )
-  " FIXME: Unexpected. Should see the a: and l: dicts from File1Func
-  call RunDbgCmd(buf, 'echo a:arg', [ 'E121: Undefined variable: a:arg' ] )
-  call RunDbgCmd(buf,
-        \ 'echo l:local_var',
-        \ [ 'E121: Undefined variable: l:local_var' ] )
+  call RunDbgCmd(buf, 'echo a:arg', [ 'arg1' ] )
+  call RunDbgCmd(buf, 'echo l:local_var', [ 'file1arg1 test1' ] )
 
   call RunDbgCmd(buf, 'up')
   call RunDbgCmd(buf, 'backtrace', [
@@ -1110,11 +1103,10 @@ func Test_debug_backtrace_level()
         \ ],
         \ #{ match: 'pattern' } )
 
-  " FIXME: Unexpected (wrong script vars are used)
+  call RunDbgCmd(buf, 'echo s:file1_var', [ 'file1arg1' ] )
   call RunDbgCmd(buf,
-        \ 'echo s:file1_var',
-        \ [ 'E121: Undefined variable: s:file1_var' ] )
-  call RunDbgCmd(buf, 'echo s:file2_var', [ 'file2' ] )
+        \ 'echo s:file2_var',
+        \ [ 'E121: Undefined variable: s:file2_var' ] )
 
   call StopVimInTerminal(buf)
   call delete('Xtest1.vim')
