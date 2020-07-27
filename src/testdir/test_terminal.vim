@@ -1047,8 +1047,11 @@ func Run_terminal_qall_kill(line1, line2)
   let after = [
 	\ a:line1,
 	\ 'let buf = bufnr("%")',
+        \ 'let tries=0',
 	\ 'while term_getline(buf, 1) =~ "^\\s*$"',
 	\ '  sleep 10m',
+        \ '  let tries+=1',
+        \ '  if tries > 100 | cquit! | endif',
 	\ 'endwhile',
 	\ a:line2,
 	\ 'au VimLeavePre * call writefile(["done"], "Xdone")',
@@ -1079,8 +1082,11 @@ func Test_terminal_qall_exit()
   let after =<< trim [CODE]
     term
     let buf = bufnr("%")
+    let tries=0
     while term_getline(buf, 1) =~ "^\\s*$"
       sleep 10m
+      let tries += 1
+      if tries > 100 | cquit! | endif
     endwhile
     set nomore
     au VimLeavePre * call writefile(["too early"], "Xdone")
