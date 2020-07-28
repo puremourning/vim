@@ -2884,8 +2884,7 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 		dict_add_number(
 		    frame,
 		    "source_line",
-		    entry->es_info.ufunc->func->uf_script_ctx.sc_lnum +
-			entry->es_lnum);
+		    sctx.sc_lnum + entry->es_lnum);
 	    }
 	}
 	else if (entry->es_type == ETYPE_DFUNC)
