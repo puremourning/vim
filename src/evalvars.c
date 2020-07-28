@@ -2925,6 +2925,11 @@ find_var_ht(char_u *name, char_u **varname)
 	return &curtab->tp_vars->dv_hashtab;
     if (*name == 'v')				// v: variable
 	return &vimvarht;
+    //
+    //TODO get_current_funccal does not respect debug_backtrace_level, so check
+    //the estack directly here? But then the get_funccal_args_ht etc. would
+    //still try and use get_current_funccal. hmm.
+    //
     if (get_current_funccal() != NULL
 	       && get_current_funccal()->func->uf_def_status == UF_NOT_COMPILED)
     {
