@@ -33,6 +33,7 @@ static void funccal_unref(funccall_T *fc, ufunc_T *fp, int force);
 static void func_clear(ufunc_T *fp, int force);
 static int func_free(ufunc_T *fp, int force);
 static char_u *untrans_function_name(char_u *name);
+static funccall_T* get_funccal();
 
     void
 func_init()
@@ -3101,7 +3102,9 @@ restore_funccal(void)
     funccall_T *
 get_current_funccal(void)
 {
-    return current_funccal;
+    // TODO(BenJ): this respects debug_backtrace_level, but is that _always_
+    // rigth
+    return get_funccal();
 }
 
 /*
@@ -6031,7 +6034,7 @@ free_unref_funccal(int copyID, int testing)
  * Get function call environment based on backtrace debug level
  */
     static funccall_T *
-get_funccal(void)
+get_funccal()
 {
     int		i;
     funccall_T	*funccal;
@@ -6118,7 +6121,7 @@ list_func_vars(int *first)
     dict_T *
 get_current_funccal_dict(hashtab_T *ht)
 {
-    // FIXME: shouldn't this check get_funccal() ?
+    // FIXME: shouldn't this check get_funccal() (i.e. respect backtrace level)?
     if (current_funccal != NULL
 	    && ht == &current_funccal->l_vars.dv_hashtab)
 	return &current_funccal->l_vars;
