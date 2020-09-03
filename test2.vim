@@ -2,6 +2,18 @@ let s:script_var = 'testing inside'
 
 echom "Testing inside"
 
+function! 
+      \ Test4(
+      \   that,
+      \   has,
+      \   lots,
+      \   of,
+      \   lines )
+  for i in range( 0, 10 )
+    echom "Test4" i
+  endfor
+endfunction
+
 function! Test3()
 	echom "Test3"
         echom a
