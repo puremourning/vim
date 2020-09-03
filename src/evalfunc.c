@@ -2881,6 +2881,21 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	    {
 		scriptitem_T *si = si = SCRIPT_ITEM( sctx.sc_sid );
 		dict_add_string(frame, "source_file", si->sn_name);
+		// FIXME(BenJ): This line offset is incorrect when the function
+		// definition contains continuation lines. e.g.
+		// funtion A(
+		//   \ b
+		//   \ c
+		//   \ )
+		//   one
+		//   two
+		//   three
+		// endfunction
+		//
+		// The line number is off by the number of continuation lines
+		// before the first actual line. this is because the sctx points
+		// to the 'function' call and the line numbers count lines after
+		// the end of that command
 		dict_add_number(
 		    frame,
 		    "source_line",
