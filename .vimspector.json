@@ -160,13 +160,14 @@
     },
 
     "Vimscript test": {
-      "adapter": {
-        "command": [ "node", "/Users/ben/Development/vim-debug-adapter/dist/index.js" ]
-      },
+      "adapter": "vim-debug-adapter",
       "configuration": {
         "type": "vim",
         "request": "launch",
-        "vim": "${workspaceRoot}/src/vim"
+        "vim": "${workspaceRoot}/src/vim",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        }
       }
     }
   }
