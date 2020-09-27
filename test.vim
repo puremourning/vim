@@ -20,3 +20,5 @@ call Test2( g:f )
 
 autocmd User TestAutoCommand call s:Test()
 autocmd User TestAutoCommand call Test2( 'woop' )
+
+call Test4( 'that', 'has', 'lots', 'of', 'ines' )
