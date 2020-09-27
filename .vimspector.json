@@ -125,6 +125,14 @@
         }
       }
     },
+    "Attach: CodeLLDB - any running instance": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim",
+        "stopOnEntry": true
+      }
+    },
     "Attach - lldb-vscode": {
       "adapter": "lldb-vscode",
       "configuration": {
