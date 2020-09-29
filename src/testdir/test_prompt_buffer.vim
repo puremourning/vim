@@ -182,4 +182,27 @@ func Test_prompt_buffer_getbufinfo()
   %bwipe!
 endfunc
 
+function! Test_Prompt_While_Writing_To_Hidden_Buffer()
+  call CanTestPromptBuffer()
+  let scriptName = 'XpromptscriptHiddenBuf'
+  let script =<< trim END
+    set buftype=prompt
+    call prompt_setprompt( bufnr(), 'cmd:' )
+    let job = job_start( [ 'uuencode', '/dev/urandom', '/dev/stdout' ], #{
+      \ out_io: 'buffer',
+      \ out_name: '' } )
+    startinsert
+  END
+  exec script->writefile( scriptName )
+
+  let buf = RunVimInTerminal('-S ' . scriptName, {})
+  call WaitForAssert({-> assert_equal('cmd:', term_getline(buf, 1))})
+
+  call term_sendkeys( buf, 'test' )
+  call WaitForAssert( {-> assert_equal('cmd:test', term_getline(buf, 1)) } )
+
+  call StopVimInTerminal(buf)
+  call delete(scriptName)
+endfunc
+
 " vim: shiftwidth=2 sts=2 expandtab
