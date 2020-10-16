@@ -99,3 +99,8 @@ src/pixmaps
 
 # other possible files build by tools
 src/cscope.out
+
+# Tooling
+.clangd/
+.cache/
+compile_commands.json
