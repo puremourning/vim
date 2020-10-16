@@ -102,7 +102,7 @@ src/pixmaps
 # other files possibly created by tools
 src/cscope.out
 
-# Linter/language server files
-/.cache/clangd/
-/.ccls-cache/
-/compile_commands.json
+# Tooling
+.clangd/
+.cache/
+compile_commands.json
