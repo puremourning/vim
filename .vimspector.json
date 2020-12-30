@@ -167,7 +167,7 @@
       }
     },
 
-    "Vimscript test": {
+    "Vimscript": {
       "adapter": "vim-debug-adapter",
       "configuration": {
         "type": "vim",
