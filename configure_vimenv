@@ -7,7 +7,9 @@ OPTS="--enable-rubyinterp=dynamic  \
       --enable-multibyte  \
       --enable-cscope"
 
-DEBUG_FLAGS="-g -gdwarf-4 -DDEBUG -O0 -fno-omit-frame-pointer"
+RELEASE_FLAGS="-O2 -march=native"
+RELDEBUG_FLAGS="-g -fno-omit-frame-pointer"
+DEBUG_FLAGS="-gdwarf-4 -DDEBUG -O0 ${RELDEBUG_FLAGS}"
 SAFETY_FLAGS='-DABORT_ON_INTERNAL_ERROR -DEXITFREE'
 LD=lld
 
@@ -15,6 +17,7 @@ export CFLAGS="${CFLAGS} -isystem /usr/local/include"
 
 BREW_TCL=1
 BREW_PYTHON=1
+DONE_DEBUG_FLAGS=0
 ENV_SUFFIX=""
 PYTHON_TYPE=""
 while [[ -n "$1" ]]; do
@@ -47,9 +50,14 @@ while [[ -n "$1" ]]; do
       ;;
     "--debug")
       export CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
+      DONE_DEBUG_FLAGS=1
       ;;
     "--relwithdebinfo")
-      export CFLAGS="${CFLAGS} -g -O2 -march=native"
+      # This is the default
+      ;;
+    "--release")
+      export CFLAGS="${CFLAGS} ${RELEASE_FLAGS}"
+      DONE_DEBUG_FLAGS=1
       ;;
     "--develop")
       export CFLAGS="${CFLAGS} ${SAFETY_FLAGS}"
@@ -110,6 +118,11 @@ if [[ $BREW_TCL -eq 1 ]]; then
   echo "Using homebrew TCL"
   export PATH=$(brew --prefix tcl-tk)/bin:${PATH}
   OPTS="${OPTS} --with-tclsh=tclsh"
+fi
+
+if [[ $DONE_DEBUG_FLAGS -eq 0 ]]; then
+  # Default to release with debug info
+  export CFLAGS="${CFLAGS} ${RELEASE_FLAGS} ${RELDEBUG_FLAGS}"
 fi
 
 make distclean
