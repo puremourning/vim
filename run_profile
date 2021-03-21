@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+OUT=vim.trace
+
+export MIMALLOC_VERBOSE=1
+export MIMALLOC_SHOW_STATS=1
+export DYLD_FORCE_FLAT_NAMESPACE=1
+export DYLD_INSERT_LIBRARIES=$HOME/Development/mimalloc/build/libmimalloc-debug.dylib
+
+xcrun xctrace record --output $OUT --template 'High Frequency Time Profile' \
+                     --target-stdin - \
+                     --target-stdout - \
+                     --append-run \
+                     --env VIMRUNTIME=$(pwd)/runtime \
+                     --launch -- \
+                     $(pwd)/src/vim --not-a-term --clean --noplugin "$@"

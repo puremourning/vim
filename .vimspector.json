@@ -113,6 +113,25 @@
         }
       }
     },
+    "Run - dev ycmd - mimalloc": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "--cmd", "let g:benj_test_ycm=1",
+          "--cmd", "let g:ycm_use_clangd=1"
+        ],
+        "cwd": "${workspaceRoot}",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime",
+
+          "DYLD_INSERT_LIBRARIES": "$HOME/Development/mimalloc/build/libmimalloc.dylib",
+          "DYLD_FORCE_FLAT_NAMESPACE": "1"
+
+        }
+      }
+    },
     "Attach": {
       "adapter": "vscode-cpptools",
       "configuration": {
