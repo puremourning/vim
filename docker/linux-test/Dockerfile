@@ -53,8 +53,16 @@ RUN apt-get -y install build-essential \
                        libffi-dev\
                        liblzma-dev\
                        ctags \
+                       lsb-release \
+                       software-properties-common \
                        python-openssl && \
     apt-get -y autoremove
+
+## LLDB - latest
+RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)" && \
+    update-alternatives \
+      --install /usr/bin/lldb        lldb        /usr/bin/lldb-12         10 \
+      --slave   /usr/bin/lldb-server lldb-server /usr/bin/lldb-server-12
 
 ## cleanup of files from setup
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

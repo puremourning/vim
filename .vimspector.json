@@ -84,7 +84,7 @@
         "waitFor#json": "${WaitFor:false}"
       }
     },
-    "Run: Docker": {
+    "Run: Docker - gdbserver": {
       "adapter": {
         "command": [
           "${gadgetDir}/vscode-cpptools/debugAdapters/OpenDebugAD7"
