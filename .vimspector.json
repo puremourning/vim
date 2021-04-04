@@ -83,6 +83,56 @@
         "stopOnEntry#json": "${StopOnEntry:true}",
         "waitFor#json": "${WaitFor:false}"
       }
+    },
+    "Run: Docker": {
+      "adapter": {
+        "command": [
+          "${gadgetDir}/vscode-cpptools/debugAdapters/OpenDebugAD7"
+        ],
+        "name": "cppdbg",
+        "configuration": {
+          "type": "cppdbg"
+        },
+        "launch": {
+          "remote": {
+            "container": "${ContainerID}",
+            "runCommand": [
+              "gdbserver",
+              "--once",
+              "--no-startup-with-shell",
+              "0.0.0.0:${port}",
+              "%CMD%"
+            ]
+          },
+          "delay": "1000m"
+        },
+        "attach": {
+          "remote": {
+            "container": "${ContainerID}",
+            "pidCommand": [ "pgrep", "vim" ],
+            "attachCommand": [
+              "gdbserver",
+              "--once",
+              "--attach",
+              "0.0.0.0:${port}",
+              "%PID%"
+            ]
+          }
+        }
+      },
+      "variables": {
+        "RemoteRoot": "/home/dev/vim"
+      },
+      "remote-cmdLine": [ "${RemoteRoot}/src/vim" ],
+      "remote-request": "launch",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "cwd": "${workspaceRoot}",
+        "MIMode": "gdb",
+        "miDebuggerServerAddress": "127.0.0.1:${port}",
+        "sourceFileMap#json": "{\"${RemoteRoot}\": \"${workspaceRoot}\"}"
+      }
     }
   }
 }
