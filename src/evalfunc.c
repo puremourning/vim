@@ -3684,26 +3684,12 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
     }
 }
 
+    static char_u*
+get_type_name( vartype_T type );
+
     static void
 add_one_var(dictitem_T *v, char *prefix, list_T* list)
 {
-    static char_u* var_types[] = {
-	(char_u*)"VAR_UNKNOWN",
-	(char_u*)"VAR_VOID",
-	(char_u*)"VAR_BOOL",
-	(char_u*)"VAR_SPECIAL",
-	(char_u*)"VAR_NUMBER",
-	(char_u*)"VAR_FLOAT",
-	(char_u*)"VAR_STRING",
-	(char_u*)"VAR_BLOB",
-	(char_u*)"VAR_FUNC",
-	(char_u*)"VAR_PARTIAL",
-	(char_u*)"VAR_LIST",
-	(char_u*)"VAR_DICT",
-	(char_u*)"VAR_JOB",
-	(char_u*)"VAR_CHANNEL",
-    };
-
     char_u	*tofree;
     char_u	numbuf[NUMBUFLEN];
     dict_T	*var = dict_alloc();
@@ -3722,7 +3708,7 @@ add_one_var(dictitem_T *v, char *prefix, list_T* list)
 
     dict_add_string( var, "name", name );
     dict_add_string( var, "value", value ); // Should return typed value?
-    dict_add_string( var, "type", var_types[v->di_tv.v_type] );
+    dict_add_string( var, "type", get_type_name( v->di_tv.v_type ) );
     list_append_dict(list, var);
 
     vim_free(name);
@@ -3776,27 +3762,6 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
 	return;
     }
     entry = estack_get_level(stack_level); // TODO: Inline
-
-    // FIXME: I just found get_funccal() in userfunc.c, which could mean we
-    // don't need to store funccals in the estack at all
-    //
-    // In fact, none of this is needed -  we just need to set
-    // debug_backtrace_level!! Neat.
-    //
-    // FIXME: Replace all the funccal stack with debug_backtrace_level.
-    //
-    // However - this still only runs through func calls, NOT scripts or other
-    // things on the estack, so perhaps we should be replacing get_funccal()
-    // with something a bit better and/or using out new stack_level concept
-    // instead, so that debug_backtrace_level actually representes the estack
-    // position, not the position in the funccal->caller->caller ... chain..
-    //
-    // This would involve baking in the sctx changes too. that seems more
-    // complete. I can see why the backtrace is only functions, because that
-    // means always one sctx - i would need to extend the backtracing to include
-    // current_sctx as well.
-    //
-    // Now that the estack contains scid_T, we can do this.
 
     if ( (*scope == 'l' || *scope == 'a') && entry->es_type != ETYPE_UFUNC) {
 	emsg("No function scope for this stack frame");
@@ -10718,6 +10683,33 @@ f_type(typval_T *argvars, typval_T *rettv)
 	     break;
     }
     rettv->vval.v_number = n;
+}
+
+    static char_u*
+get_type_name( vartype_T type )
+{
+    char* n = "UNKNOWN";
+    switch (type)
+    {
+	case VAR_NUMBER:  n = "Number"; break;
+	case VAR_STRING:  n = "String"; break;
+	case VAR_PARTIAL:
+	case VAR_FUNC:    n = "Func"; break;
+	case VAR_LIST:    n = "List"; break;
+	case VAR_DICT:    n = "Dict"; break;
+	case VAR_FLOAT:   n = "Float"; break;
+	case VAR_BOOL:	  n = "Bool"; break;
+	case VAR_SPECIAL: n = "Special"; break;
+	case VAR_JOB:     n = "Job"; break;
+	case VAR_CHANNEL: n = "Chan"; break;
+	case VAR_BLOB:    n = "Blob"; break;
+	case VAR_UNKNOWN:
+	case VAR_ANY:
+	case VAR_VOID:
+	case VAR_INSTR:
+	    break;
+    }
+    return (char_u*)n;
 }
 
 /*
