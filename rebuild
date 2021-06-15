@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+./configure_vimenv --debug --develop
+./make_compile_db
