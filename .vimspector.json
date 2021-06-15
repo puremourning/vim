@@ -152,6 +152,15 @@
         "stopOnEntry": true
       }
     },
+    "Attach: CodeLLDB": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim",
+        "pid#json": "${pid}",
+        "stopOnEntry": true
+      }
+    },
     "Attach - lldb-vscode": {
       "adapter": "lldb-vscode",
       "configuration": {

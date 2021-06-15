@@ -136,27 +136,34 @@ estack_push_ufunc(funccall_T *ufunc)
 				    : ufunc->func->uf_name,
 				  ufunc->linenr);
     if (entry != NULL)
-	entry->es_info.ufunc = ufunc;
+	entry->es_info.funccall = ufunc;
     return entry;
 }
 
+// estack_push_ufunc is defined in 
 
-// TODO: Need to work out how to handle dfuncs. CUrrently the code for dfuncs is
-// basially the _old_ code for ufuncs and it's getting more and more pointless
-// and confusing. Probably the right thing to do is to put the cctx_t in the
-// estack
-//
-// TODO: take a dfunc_T* ?
-    estack_T *
-estack_push_dfunc(ufunc_T *ufunc, long lnum)
+    estack_T*
+estack_push_dfunc(dfunc_T *dfunc)
 {
     estack_T *entry = estack_push(ETYPE_DFUNC,
+				  dfunc->df_name,
+				  0);
+    if (entry != NULL)
+	entry->es_info.dfunc = dfunc;
+    return entry;
+}
+
+    estack_T *
+estack_push_compiling_dfunc(ufunc_T *ufunc, long lnum)
+{
+    // TODO: add ETYPE_CDFUNC
+    estack_T *entry = estack_push(ETYPE_CDFUNC,
 				  ufunc->uf_name_exp != NULL
 				    ? ufunc->uf_name_exp
 				    : ufunc->uf_name,
 				  lnum);
     if (entry != NULL)
-	entry->es_info.dfunc = ufunc;
+	entry->es_info.ufunc = ufunc;
     return entry;
 }
 

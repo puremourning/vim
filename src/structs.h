@@ -1698,6 +1698,35 @@ typedef struct
 				// KS_EXTRA KE_SNR)
 } ufunc_T;
 
+/*
+ * Info about a function defined with :def.  Used in "def_functions".
+ */
+struct dfunc_S {
+    ufunc_T	*df_ufunc;	    // struct containing most stuff
+    int		df_refcount;	    // how many ufunc_T point to this dfunc_T
+    int		df_idx;		    // index in def_functions
+    int		df_deleted;	    // if TRUE function was deleted
+    int		df_script_seq;	    // Value of sctx_T sc_seq when the function
+				    // was compiled.
+    char_u	*df_name;	    // name used for error messages
+
+    garray_T	df_def_args_isn;    // default argument instructions
+    garray_T	df_var_names;	    // names of local vars
+
+    // After compiling "df_instr" and/or "df_instr_prof" is not NULL.
+    isn_T	*df_instr;	    // function body to be executed
+    int		df_instr_count;	    // size of "df_instr"
+    int		df_instr_debug_count; // size of "df_instr_debug"
+    isn_T	*df_instr_debug;      // like "df_instr" with debugging
+#ifdef FEAT_PROFILE
+    isn_T	*df_instr_prof;	     // like "df_instr" with profiling
+    int		df_instr_prof_count; // size of "df_instr_prof"
+#endif
+
+    int		df_varcount;	    // number of local variables
+    int		df_has_closure;	    // one if a closure was created
+};
+
 // flags used in uf_flags
 #define FC_ABORT    0x01	// abort function on error
 #define FC_RANGE    0x02	// function accepts range
@@ -2169,6 +2198,8 @@ typedef enum {
     ETYPE_TOP,		    // toplevel
     ETYPE_SCRIPT,	    // sourcing script, use es_info.sctx
     ETYPE_UFUNC,	    // user function, use es_info.ufunc
+    ETYPE_DFUNC,	    // user def function, use es_info.dfunc
+    ETYPE_CDFUNC,	    // def function being compiled, use es_info.ufunc
     ETYPE_DFUNC,	    // user function, use es_info.ufunc
     ETYPE_AUCMD,	    // autocomand, use es_info.aucmd
     ETYPE_MODELINE,	    // modeline, use es_info.sctx
@@ -2186,8 +2217,9 @@ typedef struct {
     union {
 	scid_T	    scid;   // script and modeline info.
 #if defined(FEAT_EVAL)
-	funccall_T *ufunc;     // function call info
-	ufunc_T    *dfunc;     // function info without local vars
+	ufunc_T    *ufunc;     // user function info
+	funccall_T *funccall;  // function call info
+	dfunc_T    *dfunc;     // function info without local vars
 #endif
 	AutoPatCmd_T *aucmd;  // autocommand info
 	except_T     *except; // exception info

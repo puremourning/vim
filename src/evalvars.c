@@ -3273,7 +3273,7 @@ get_script_local_ht(void)
 		break;
 
 	    case ETYPE_UFUNC:
-		sid = stack_frame->es_info.ufunc->func->uf_script_ctx.sc_sid;
+		sid = stack_frame->es_info.funccall->func->uf_script_ctx.sc_sid;
 		break;
 
 	    case ETYPE_SCRIPT:
@@ -3282,6 +3282,7 @@ get_script_local_ht(void)
 
 	    case ETYPE_DFUNC:
 		// TODO
+	    case ETYPE_CDFUNC:
 	    case ETYPE_TOP:
 	    case ETYPE_ENV:
 	    case ETYPE_ARGS:

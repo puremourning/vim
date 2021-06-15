@@ -6048,7 +6048,7 @@ get_funccal()
 
 	if (stack_frame->es_type == ETYPE_UFUNC)
 	{
-	    funccal = stack_frame->es_info.ufunc;
+	    funccal = stack_frame->es_info.funccall;
 	}
     }
     return funccal;

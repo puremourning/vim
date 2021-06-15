@@ -3590,106 +3590,101 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 	if (entry->es_name == NULL)
 	    break;
 
-	if (entry->es_type == ETYPE_UFUNC)
+	switch (entry->es_type)
 	{
-	    sctx_T sctx = entry->es_info.ufunc->func->uf_script_ctx;
-
-	    frame = dict_alloc();
-	    if (frame == NULL)
-		break;
-
-
-	    dict_add_number(frame, "stack_level", idx);
-	    dict_add_string(frame, "type", (char_u*)"UFUNC" );
-	    dict_add_string(frame, "name", entry->es_name);
-	    dict_add_number(frame, "line", entry->es_lnum);
-	    if ( sctx.sc_sid )
+	    case ETYPE_UFUNC:
+	    case ETYPE_DFUNC:
+	    case ETYPE_CDFUNC:
 	    {
-		scriptitem_T *si = si = SCRIPT_ITEM( sctx.sc_sid );
-		dict_add_string(frame, "source_file", si->sn_name);
-		// FIXME(BenJ): This line offset is incorrect when the function
-		// definition contains continuation lines. e.g.
-		// funtion A(
-		//   \ b
-		//   \ c
-		//   \ )
-		//   one
-		//   two
-		//   three
-		// endfunction
-		//
-		// The line number is off by the number of continuation lines
-		// before the first actual line. this is because the sctx points
-		// to the 'function' call and the line numbers count lines after
-		// the end of that command
-		dict_add_number(
-		    frame,
-		    "source_line",
-		    sctx.sc_lnum + entry->es_lnum);
+		sctx_T sctx;
+
+		frame = dict_alloc();
+		if (frame == NULL)
+		    break;
+
+		dict_add_number(frame, "stack_level", idx);
+
+		if ( entry->es_type == ETYPE_UFUNC )
+		{
+		    sctx = entry->es_info.funccall->func->uf_script_ctx;
+		    dict_add_string(frame, "type", (char_u*)"UFUNC" );
+		}
+		else if ( entry->es_type == ETYPE_DFUNC )
+		{
+		    sctx = entry->es_info.dfunc->df_ufunc->uf_script_ctx;
+		    dict_add_string(frame, "type", (char_u*)"DFUNC" );
+		}
+		else if ( entry->es_type == ETYPE_CDFUNC )
+		{
+		    sctx = entry->es_info.ufunc->uf_script_ctx;
+		    dict_add_string(frame, "type", (char_u*)"Compiling DFUNC" );
+		}
+
+		dict_add_string(frame, "name", entry->es_name);
+		dict_add_number(frame, "line", entry->es_lnum);
+		if ( sctx.sc_sid )
+		{
+		    scriptitem_T *si = si = SCRIPT_ITEM( sctx.sc_sid );
+		    dict_add_string(frame, "source_file", si->sn_name);
+		    dict_add_number(
+			frame,
+			"source_line",
+			sctx.sc_lnum + entry->es_lnum);
+		}
+		break;
 	    }
-	}
-	else if (entry->es_type == ETYPE_DFUNC)
-	{
-	    // Not yet implemented
-	    continue;
-	}
-	else if (entry->es_type == ETYPE_SCRIPT)
-	{
-	    frame = dict_alloc();
-	    if (frame == NULL)
+	    case ETYPE_SCRIPT:
+		frame = dict_alloc();
+		if (frame == NULL)
+		    break;
+
+		dict_add_number(frame, "stack_level", idx);
+		dict_add_string(frame, "type", (char_u*)"SCRIPT" );
+		dict_add_string(frame, "name", (char_u*)"source" );
+		dict_add_number(frame, "line", entry->es_lnum);
+		dict_add_string(frame, "source_file", entry->es_name);
+		dict_add_number(frame, "source_line", entry->es_lnum);
 		break;
-
-	    dict_add_number(frame, "stack_level", idx);
-	    dict_add_string(frame, "type", (char_u*)"SCRIPT" );
-	    dict_add_string(frame, "name", (char_u*)"source" );
-	    dict_add_number(frame, "line", entry->es_lnum);
-	    dict_add_string(frame, "source_file", entry->es_name);
-	    dict_add_number(frame, "source_line", entry->es_lnum);
-	}
-	else if (entry->es_type == ETYPE_TOP)
-	{
-	    // We're done; TBH this should always be botton of stack.
-	    assert( idx == 0 );
-	    break;
-	}
-	else if (entry->es_type == ETYPE_ENV ||
-		 entry->es_type == ETYPE_ARGS ||
-		 entry->es_type == ETYPE_INTERNAL)
-	{
-	    // this stack frame isn't interesting or useful to the user
-	    continue;
-	}
-	else if (entry->es_type == ETYPE_AUCMD)
-	{
-	    AutoCmd *cmd = entry->es_info.aucmd;
-	    sctx_T sctx = cmd->script_ctx;
-
-	    frame = dict_alloc();
-	    if (frame == NULL)
+	    case ETYPE_TOP:
+		// We're done; TBH this should always be botton of stack.
+		assert( idx == 0 );
 		break;
-
-	    dict_add_number(frame, "stack_level", idx);
-	    dict_add_string(frame, "type", (char_u*)"AUCMD" );
-	    dict_add_string(frame, "name", entry->es_name);
-	    dict_add_number(frame, "line", entry->es_lnum);
-	    if ( sctx.sc_sid )
+	    case ETYPE_ENV:
+	    case ETYPE_ARGS:
+	    case ETYPE_INTERNAL:
+		// this stack frame isn't interesting or useful to the user
+		continue;
+		break;
+	    case ETYPE_AUCMD:
 	    {
-		scriptitem_T* script = SCRIPT_ITEM( cmd->script_ctx.sc_sid );
-		dict_add_string(frame, "source_file", script->sn_name );
-		dict_add_number(frame, "source_line", sctx.sc_lnum );
+		AutoCmd *cmd = entry->es_info.aucmd;
+		sctx_T sctx = cmd->script_ctx;
+
+		frame = dict_alloc();
+		if (frame == NULL)
+		    break;
+
+		dict_add_number(frame, "stack_level", idx);
+		dict_add_string(frame, "type", (char_u*)"AUCMD" );
+		dict_add_string(frame, "name", entry->es_name);
+		dict_add_number(frame, "line", entry->es_lnum);
+		if ( sctx.sc_sid )
+		{
+		    scriptitem_T* script = SCRIPT_ITEM( cmd->script_ctx.sc_sid );
+		    dict_add_string(frame, "source_file", script->sn_name );
+		    dict_add_number(frame, "source_line", sctx.sc_lnum );
+		}
+		break;
 	    }
-	}
-	else if(entry->es_type == ETYPE_SPELL ||
-		entry->es_type == ETYPE_EXCEPT ||
-		entry->es_type == ETYPE_MODELINE)
-	{
-	    // Not yet implemented; note this will leave a gap in the ids but
-	    // that's ok
-	    continue;
-	}
-	else
-	{
-	    emsg( "Internal Error: Unknown stack entry type" );
+	    case ETYPE_SPELL:
+	    case ETYPE_EXCEPT:
+	    case ETYPE_MODELINE:
+	    {
+		// Not yet implemented; note this will leave a gap in the ids but
+		// that's ok
+		continue;
+		break;
+	    }
 	}
 
 	assert( frame );
@@ -3777,24 +3772,26 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
     }
     entry = estack_get_level(stack_level); // TODO: Inline
 
+    // FIXME: there's a way to do this already specifically ETYPE_DFUNC
     if ( (*scope == 'l' || *scope == 'a') && entry->es_type != ETYPE_UFUNC) {
 	emsg("No function scope for this stack frame");
 	return;
     }
 
     // FIXME: most of the useful parts of this (function, arg and script-local)
-    // won't work in vim9script
+    // won't work in vim9script - there's a way to get the locals at least (the
+    // a: dict doesn't exit)
 
     switch( *scope )
     {
     case 'l':
-	add_hashtable_vars( &entry->es_info.ufunc->l_vars.dv_hashtab,
+	add_hashtable_vars( &entry->es_info.funccall->l_vars.dv_hashtab,
 			    "l:",
 			    TRUE,
 			    rettv->vval.v_list );
 	// fall through
     case 'a':
-	add_hashtable_vars( &entry->es_info.ufunc->l_avars.dv_hashtab,
+	add_hashtable_vars( &entry->es_info.funccall->l_avars.dv_hashtab,
 			    "a:",
 			    TRUE,
 			    rettv->vval.v_list );
@@ -3803,7 +3800,7 @@ f_debug_getvariables(typval_T *argvars, typval_T *rettv)
 	if (entry->es_type == ETYPE_UFUNC)
 	{
 	    add_hashtable_vars(
-		&SCRIPT_VARS(entry->es_info.ufunc->func->uf_script_ctx.sc_sid),
+		&SCRIPT_VARS(entry->es_info.funccall->func->uf_script_ctx.sc_sid),
 		"s:",
 		FALSE,
 		rettv->vval.v_list );

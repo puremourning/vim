@@ -601,7 +601,7 @@ call_dfunc(
     // interpret this. Equally, we need to special-case the expression
     // evaluation and probably breakpoint triggering.
     // Probably, we need to pass either the dfunc itself, or the cctx ?
-    entry = estack_push_dfunc(dfunc->df_ufunc, 1);
+    entry = estack_push_dfunc(dfunc);
     if (entry != NULL)
     {
 	// Set the script context to the script where the function was defined.
@@ -5333,13 +5333,13 @@ call_def_function(
 	}
 
 	ectx.ec_instr = INSTRUCTIONS(dfunc);
-    }
 
-    // Following errors are in the function, not the caller.
-    // Commands behave like vim9script.
-    estack_push_dfunc(ufunc, 1);
-    current_sctx = ufunc->uf_script_ctx;
-    current_sctx.sc_version = SCRIPT_VERSION_VIM9;
+	// Following errors are in the function, not the caller.
+	// Commands behave like vim9script.
+	estack_push_dfunc(dfunc);
+	current_sctx = ufunc->uf_script_ctx;
+	current_sctx.sc_version = SCRIPT_VERSION_VIM9;
+    }
 
     // Use a specific location for storing error messages to be converted to an
     // exception.

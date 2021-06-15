@@ -527,7 +527,7 @@ dbg_check_breakpoint(exarg_T *eap)
     {
 	return;
     }
-;
+
     debug_skipped = FALSE;
     if (debug_breakpoint_name != NULL)
     {
