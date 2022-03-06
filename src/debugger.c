@@ -133,6 +133,8 @@ do_debug(char_u *cmd, char_u* reason)
     {
 	vim_free(cmdline);
 	// If the user configured a debugfunc, call it and get a command
+	//
+	// TODO(Ben): What about a vim9 def func?
 	if ( *p_debugfunc && find_func( p_debugfunc, TRUE ) )
 	{
 	    // see the stuff in time.c that gets saved when running a timer
