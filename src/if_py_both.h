@@ -53,7 +53,7 @@ static const char *vim_special_path = "_vim_path_";
 #define INVALID_TABPAGE_VALUE ((tabpage_T *)(-1))
 
 typedef void (*rangeinitializer)(void *);
-typedef void (*runner)(const char *, void *
+typedef void (*runner)(const char *, dict_T *, void *
 #ifdef PY_CAN_RECURSE
 	, PyGILState_STATE *
 #endif
@@ -5682,7 +5682,7 @@ init_range_eval(typval_T *rettv UNUSED)
 }
 
     static void
-run_cmd(const char *cmd, void *arg UNUSED
+run_cmd(const char *cmd, dict_T* locals UNUSED, void *arg UNUSED
 #ifdef PY_CAN_RECURSE
 	, PyGILState_STATE *pygilstate UNUSED
 #endif
@@ -5707,7 +5707,7 @@ static const char	*code_hdr = "def " DOPY_FUNC "(line, linenr):\n ";
 static int		code_hdr_len = 30;
 
     static void
-run_do(const char *cmd, void *arg UNUSED
+run_do(const char *cmd, dict_T* locals UNUSED, void *arg UNUSED
 #ifdef PY_CAN_RECURSE
 	, PyGILState_STATE *pygilstate
 #endif
@@ -5829,15 +5829,21 @@ out:
 }
 
     static void
-run_eval(const char *cmd, typval_T *rettv
+run_eval(const char *cmd, dict_T *locals, typval_T *rettv
 #ifdef PY_CAN_RECURSE
 	, PyGILState_STATE *pygilstate UNUSED
 #endif
 	)
 {
     PyObject	*run_ret;
+    PyObject	*pylocals;
 
-    run_ret = PyRun_String((char *)cmd, Py_eval_input, globals, globals);
+    if (locals)
+	pylocals = NEW_DICTIONARY(locals);
+    else
+	pylocals = globals;
+
+    run_ret = PyRun_String((char *)cmd, Py_eval_input, globals, pylocals);
     if (run_ret == NULL)
     {
 	if (PyErr_Occurred() && PyErr_ExceptionMatches(PyExc_SystemExit))
