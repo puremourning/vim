@@ -1,0 +1,2 @@
+set pythonthreedll=/usr/local/Cellar/python@3.10/3.10.4/Frameworks/Python.framework/Versions/Current/lib/libpython3.10.dylib
+set pythondll=/Users/ben/.pyenv/versions/2.7.18/lib/libpython2.7.dylib
