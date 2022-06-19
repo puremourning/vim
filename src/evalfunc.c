@@ -7887,7 +7887,7 @@ f_py3eval(typval_T *argvars, typval_T *rettv)
     }
     else if (argvars[1].v_type != VAR_UNKNOWN)
     {
-	semsg( "Invalid argument: must be dict" );
+	emsg(_(e_dictionary_required));
 	return;
     }
     else
@@ -7945,7 +7945,8 @@ f_pyxeval(typval_T *argvars, typval_T *rettv)
     {
 	if (argvars[1].v_type != VAR_UNKNOWN)
 	{
-	    semsg( "Invalid argument: locals dict not supported in this version" );
+	    // TODO: Better error message?
+	    emsg(_(e_sorry_command_is_not_available_in_this_version));
 	    return;
 	}
 	f_pyeval(argvars, rettv);
