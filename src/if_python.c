@@ -1058,7 +1058,7 @@ DoPyCommand(const char *cmd, rangeinitializer init_range, runner run, void *arg)
     Python_RestoreThread();	    // enter python
 #endif
 
-    run((char *) cmd, arg
+    run((char *) cmd, NULL /*locals only supported in py3*/, arg
 #ifdef PY_CAN_RECURSE
 	    , &pygilstate
 #endif
