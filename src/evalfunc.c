@@ -7873,9 +7873,9 @@ f_py3eval(typval_T *argvars, typval_T *rettv)
     if (check_restricted() || check_secure())
 	return;
 
-    if (in_vim9script() && (
-	    check_for_string_arg(argvars, 0) == FAIL ||
-	    check_for_opt_dict_arg(argvars, 1) == FAIL ) )
+    if (in_vim9script()
+	    && (check_for_string_arg(argvars, 0) == FAIL
+		|| check_for_opt_dict_arg(argvars, 1) == FAIL))
 	return;
 
     if (p_pyx == 0)
@@ -7887,7 +7887,7 @@ f_py3eval(typval_T *argvars, typval_T *rettv)
     }
     else if (argvars[1].v_type != VAR_UNKNOWN)
     {
-	emsg( "Invalid argument: must be dict" );
+	semsg( "Invalid argument: must be dict" );
 	return;
     }
     else
@@ -7934,9 +7934,9 @@ f_pyxeval(typval_T *argvars, typval_T *rettv)
     if (check_restricted() || check_secure())
 	return;
 
-    if (in_vim9script() && (
-	    check_for_string_arg(argvars, 0) == FAIL ||
-	    check_for_opt_dict_arg(argvars, 1) == FAIL ) )
+    if (in_vim9script()
+	    && (check_for_string_arg(argvars, 0) == FAIL
+		|| check_for_opt_dict_arg(argvars, 1) == FAIL))
 	return;
 
 # if defined(FEAT_PYTHON) && defined(FEAT_PYTHON3)
@@ -7945,7 +7945,7 @@ f_pyxeval(typval_T *argvars, typval_T *rettv)
     {
 	if (argvars[1].v_type != VAR_UNKNOWN)
 	{
-	    emsg( "Invalid argument: locals dict not supported in this version" );
+	    semsg( "Invalid argument: locals dict not supported in this version" );
 	    return;
 	}
 	f_pyeval(argvars, rettv);
