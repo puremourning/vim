@@ -1034,7 +1034,7 @@ dbg_find_breakpoint_in_func(
 	// we might have found a breakpoint outside of the function, so
 	// don't overflow the function's lines -
 	if (file_breakpoint < 0 ||
-	    file_breakpoint >= func_call->func->uf_lines.ga_len)
+	    file_breakpoint > func_call->func->uf_lines.ga_len)
 	{
 	    file_breakpoint = 0;
 	}
@@ -1059,7 +1059,7 @@ dbg_find_breakpoint_in_func(
 
 
     assert( breakpoint == 0 || breakpoint > after );
-    assert( breakpoint == 0 || breakpoint < func_call->func->uf_lines.ga_len );
+    assert( breakpoint == 0 || breakpoint <= func_call->func->uf_lines.ga_len );
 
     return breakpoint;
 }
