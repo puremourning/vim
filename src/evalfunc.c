@@ -3657,8 +3657,7 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 		break;
 	    case ETYPE_AUCMD:
 	    {
-		AutoCmd *cmd = entry->es_info.aucmd;
-		sctx_T sctx = cmd->script_ctx;
+		sctx_T *def_ctx = acp_script_ctx(entry->es_info.aucmd);
 
 		frame = dict_alloc();
 		if (frame == NULL)
@@ -3668,11 +3667,11 @@ f_debug_getstack(typval_T *argvars, typval_T *rettv)
 		dict_add_string(frame, "type", (char_u*)"AUCMD" );
 		dict_add_string(frame, "name", entry->es_name);
 		dict_add_number(frame, "line", entry->es_lnum);
-		if ( sctx.sc_sid )
+		if ( def_ctx->sc_sid > 0 )
 		{
-		    scriptitem_T* script = SCRIPT_ITEM( cmd->script_ctx.sc_sid );
+		    scriptitem_T* script = SCRIPT_ITEM( def_ctx->sc_sid );
 		    dict_add_string(frame, "source_file", script->sn_name );
-		    dict_add_number(frame, "source_line", sctx.sc_lnum );
+		    dict_add_number(frame, "source_line", def_ctx->sc_lnum );
 		}
 		break;
 	    }

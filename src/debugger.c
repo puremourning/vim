@@ -450,7 +450,7 @@ do_checkbacktracelevel(void)
     static void
 do_showbacktrace(char_u *cmd)
 {
-    // TODO(BenJ): This is strying to write a backtrace based on the
+    // TODO(BenJ): This is trying to write a backtrace based on the
     // estack_sfile() output, but it would really just use the estack directly
     char_u  *sname;
     char    *cur;

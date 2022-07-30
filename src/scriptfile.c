@@ -256,7 +256,7 @@ estack_sfile(estack_arg_T which UNUSED)
 	{
 	    if (entry->es_type == ETYPE_UFUNC)
 	    {
-		sctx_T *def_ctx = &entry->es_info.ufunc->func->uf_script_ctx;
+		sctx_T *def_ctx = &entry->es_info.ufunc->uf_script_ctx;
 
 		if (def_ctx->sc_sid > 0)
 		    return vim_strsave(SCRIPT_ITEM(def_ctx->sc_sid)->sn_name);

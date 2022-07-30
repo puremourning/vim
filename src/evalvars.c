@@ -3269,7 +3269,7 @@ get_script_local_ht(void)
 	switch (stack_frame->es_type)
 	{
 	    case ETYPE_AUCMD:
-		sid = stack_frame->es_info.aucmd->script_ctx.sc_sid;
+		sid = acp_script_ctx(stack_frame->es_info.aucmd)->sc_sid;
 		break;
 
 	    case ETYPE_UFUNC:
