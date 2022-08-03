@@ -1,6 +1,19 @@
 {
    "configurations": {
-    "Run - clean": {
+    "Run - Clean": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [ "--clean" ],
+        "cwd": "${workspaceRoot}",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        },
+        "expressions": "native"
+      }
+    },
+    "Run - Nu NONE": {
       "adapter": "CodeLLDB",
       "configuration": {
         "request": "launch",
