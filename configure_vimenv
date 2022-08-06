@@ -9,6 +9,7 @@ OPTS="--enable-rubyinterp=dynamic  \
 
 DEBUG_FLAGS="-g -gdwarf-4 -DDEBUG -O0 -fno-omit-frame-pointer"
 SAFETY_FLAGS='-DABORT_ON_INTERNAL_ERROR -DEXITFREE'
+SANITISER_FLAGS='-fsanitize=address -fsanitize=undefined -fsanitize-recover=all'
 LD=lld
 
 export CFLAGS="${CFLAGS} -isystem /usr/local/include"
@@ -52,7 +53,8 @@ while [[ -n "$1" ]]; do
       export CFLAGS="${CFLAGS} -g -O2 -march=native"
       ;;
     "--develop")
-      export CFLAGS="${CFLAGS} ${SAFETY_FLAGS}"
+      export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} ${SAFETY_FLAGS} ${SANITISER_FLAGS}"
+      export LIBS="${LIBS} ${DEBUG_FLAGS} ${SAFETY_FLAGS} ${SANITISER_FLAGS}"
       ;;
     "--asan")
       export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} ${SAFETY_FLAGS} -fsanitize=address"
