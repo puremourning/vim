@@ -76,6 +76,26 @@
       }
     },
 
+    "Attach: max PID": {
+      "adapter": "CodeLLDB",
+      "variables": {
+        "pid": {
+          "shell": [
+            "/bin/bash",
+            "-c",
+            "pgrep vim | sort | tail -1"
+          ]
+        }
+      },
+      "configuration": {
+        "request": "attach",
+        "program": "${workspaceRoot}/src/vim",
+        "expressions": "native",
+        "stopOnEntry#json": "${StopOnEntry:true}",
+        "pid": "${pid}"
+      }
+    },
+
     "Attach: PID": {
       "adapter": "CodeLLDB",
       "configuration": {
