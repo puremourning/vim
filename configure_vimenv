@@ -50,7 +50,7 @@ while [[ -n "$1" ]]; do
       export CFLAGS="${CFLAGS} ${DEBUG_FLAGS}"
       ;;
     "--relwithdebinfo")
-      export CFLAGS="${CFLAGS} -g -O2"
+      export CFLAGS="${CFLAGS} -g -Og"
       ;;
     "--develop")
       export CFLAGS="${CFLAGS} ${DEBUG_FLAGS} ${SAFETY_FLAGS} ${SANITISER_FLAGS}"
