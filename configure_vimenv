@@ -2,8 +2,7 @@
 
 PYTHON="--enable-python3interp"
 
-OPTS="--enable-rubyinterp=dynamic  \
-      --enable-tclinterp \
+OPTS="--enable-tclinterp \
       --enable-multibyte  \
       --enable-cscope"
 
@@ -67,7 +66,7 @@ while [[ -n "$1" ]]; do
     "--no-brew-python")
       BREW_PYTHON=0
       ;;
-    "--no-brew-python")
+    "--no-brew-tcl")
       BREW_TCL=0
       ;;
     "--debug-python")
@@ -115,7 +114,7 @@ if [[ $BREW_TCL -eq 1 ]]; then
 fi
 
 make distclean
-./configure --prefix=/Users/ben/Development/vim-env${ENV_SUFFIX} \
+./configure --prefix=$(pwd)/root \
             --with-features=huge \
             --enable-terminal \
             ${PYTHON}${PYTHON_TYPE} \

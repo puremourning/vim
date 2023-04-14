@@ -166,6 +166,28 @@
         "miDebuggerServerAddress": "127.0.0.1:${port}",
         "sourceFileMap#json": "{\"${RemoteRoot}\": \"${workspaceRoot}\"}"
       }
+    },
+    "Run - a vimspector test": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/src/vim",
+        "args": [
+          "-f",
+          "-N",
+          "--clean",
+          "--not-a-term",
+          "-S", "lib/run_test.vim",
+          "--cmd", "let g:vimspector_base_dir='${HOME}/vimspector/${VIMSPECTOR_TEST_BASE}'",
+          "${TestFileBase}.test.vim",
+          "${TestName}"
+        ],
+        "cwd": "${HOME}/vimspector/tests",
+        "env": {
+          "VIMRUNTIME": "${workspaceRoot}/runtime"
+        },
+        "expressions": "native"
+      }
     }
   }
 }
